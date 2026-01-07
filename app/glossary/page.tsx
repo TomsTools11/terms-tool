@@ -6,7 +6,7 @@ import { getTerms, saveTerm, deleteTerm, downloadCSV, importFromCSV, ImportResul
 import TermCard from '@/components/TermCard';
 import AppLayout from '@/components/AppLayout';
 import ProtectedPage from '@/components/ProtectedPage';
-import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Calculator, Filter, Sparkles } from 'lucide-react';
+import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Calculator, Filter, Sparkles, Copy } from 'lucide-react';
 import Link from 'next/link';
 
 type FilterType = 'all' | 'kpi' | 'top' | 'medium' | 'low';
@@ -111,6 +111,56 @@ function GlossaryPageContent() {
 
   const handleExport = () => {
     downloadCSV(terms, `glossary-${new Date().toISOString().split('T')[0]}.csv`);
+  };
+
+  // Find duplicate terms (same name, case-insensitive)
+  const duplicateCount = useMemo(() => {
+    const seen = new Map<string, number>();
+    let count = 0;
+    terms.forEach(term => {
+      const key = term.term.toLowerCase().trim();
+      const existing = seen.get(key) || 0;
+      seen.set(key, existing + 1);
+      if (existing > 0) count++;
+    });
+    return count;
+  }, [terms]);
+
+  const handleRemoveDuplicates = async () => {
+    if (duplicateCount === 0) return;
+
+    if (!window.confirm(`Remove ${duplicateCount} duplicate term${duplicateCount > 1 ? 's' : ''}? This will keep the most recently updated version of each term.`)) {
+      return;
+    }
+
+    // Group terms by lowercase name
+    const termGroups = new Map<string, Term[]>();
+    terms.forEach(term => {
+      const key = term.term.toLowerCase().trim();
+      const group = termGroups.get(key) || [];
+      group.push(term);
+      termGroups.set(key, group);
+    });
+
+    // For each group with duplicates, keep the most recently updated and delete the rest
+    const toDelete: string[] = [];
+    termGroups.forEach(group => {
+      if (group.length > 1) {
+        // Sort by updatedAt descending (most recent first)
+        group.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        // Keep the first one (most recent), delete the rest
+        for (let i = 1; i < group.length; i++) {
+          toDelete.push(group[i].id);
+        }
+      }
+    });
+
+    // Delete duplicates
+    for (const id of toDelete) {
+      await deleteTerm(id);
+    }
+
+    await loadTerms();
   };
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -319,6 +369,15 @@ function GlossaryPageContent() {
                 <Download className="h-4 w-4" />
                 Export
               </button>
+              {duplicateCount > 0 && (
+                <button
+                  onClick={handleRemoveDuplicates}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/30 rounded-lg text-sm font-medium text-[var(--color-warning)] hover:bg-[var(--color-warning)]/20 transition-colors"
+                >
+                  <Copy className="h-4 w-4" />
+                  Remove Duplicates ({duplicateCount})
+                </button>
+              )}
             </div>
           </div>
 
