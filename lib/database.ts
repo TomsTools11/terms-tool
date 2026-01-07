@@ -98,12 +98,12 @@ export async function saveTerm(term: Term): Promise<Term | null> {
   return rowToTerm(data);
 }
 
-export async function saveTerms(terms: Term[]): Promise<number> {
+export async function saveTerms(terms: Term[]): Promise<{ count: number; error?: string }> {
   const supabase = createClient();
 
   if (!supabase) {
     console.error('Supabase not configured');
-    return 0;
+    return { count: 0, error: 'Database not configured. Please check environment variables.' };
   }
 
   const rows = terms.map(termToRow);
@@ -115,10 +115,10 @@ export async function saveTerms(terms: Term[]): Promise<number> {
 
   if (error) {
     console.error('Error saving terms:', error);
-    return 0;
+    return { count: 0, error: error.message };
   }
 
-  return data?.length || 0;
+  return { count: data?.length || 0 };
 }
 
 export async function deleteTerm(id: string): Promise<boolean> {
@@ -360,8 +360,11 @@ export async function importFromCSV(csvContent: string): Promise<ImportResult> {
     });
 
     if (termsToImport.length > 0) {
-      const savedCount = await saveTerms(termsToImport);
-      result.imported = savedCount;
+      const saveResult = await saveTerms(termsToImport);
+      result.imported = saveResult.count;
+      if (saveResult.error) {
+        result.errors.push(saveResult.error);
+      }
     }
 
   } catch (error) {
