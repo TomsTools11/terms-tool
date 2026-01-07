@@ -42,43 +42,72 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < terms.length; i += batchSize) {
       const batch = terms.slice(i, i + batchSize);
 
-      const prompt = `You are an expert at business terminology and KPIs. Analyze these terms and enhance them according to these rules:
+      const prompt = `You are an expert at business terminology and KPIs. Analyze these terms and enhance them with STRICT rules:
 
-1. **Determine if each term is a KPI** (Key Performance Indicator):
-   - A KPI is a measurable metric used to evaluate success/performance
-   - KPIs typically have formulas/calculations (e.g., conversion rate, cost per lead, sales rate)
-   - Non-KPIs are concepts, processes, systems, or descriptive terms without calculations
+## STRICT KPI CLASSIFICATION
 
-2. **For KPIs:**
-   - Keep or add the acronym/abbreviation if commonly used
-   - MUST include a calculation formula (e.g., "Sales Rate = (# sales ÷ # leads) × 100")
-   - Expand the definition to explain what it measures and why it matters
+A term is ONLY a KPI if ALL of these are true:
+1. It is a QUANTITATIVE METRIC that can be measured with numbers
+2. It has a specific MATHEMATICAL FORMULA for calculation
+3. It is used to TRACK PERFORMANCE over time
 
-3. **For Non-KPIs:**
-   - Remove any acronym (set to null) unless it's a widely recognized industry abbreviation
-   - Remove any calculation (set to null)
-   - Clarify and expand the definition to be comprehensive
+Examples of TRUE KPIs (should have acronyms and calculations):
+- "Cost Per Lead" (CPL) - Formula: Total Cost ÷ Number of Leads
+- "Sales Rate" (SR) - Formula: (# sales ÷ # leads) × 100
+- "Quote-to-Close" (QTC) - Formula: (# closed ÷ # quoted) × 100
+- "Click-to-Close" (CTC) - Formula: (# closed ÷ # clicks) × 100
 
-4. **For ALL terms:**
-   - Improve the definition to be clear, professional, and 2-3 sentences
-   - Fix any grammatical issues
-   - Make definitions actionable and useful for business context
+Examples of NON-KPIs (should have NO acronym, NO calculation):
+- "Currently Insured" - This is a DESCRIPTIVE STATUS, not a measurable KPI
+- "Core Target Group" - This is a SEGMENT DEFINITION, not a metric
+- "Homeowner" - This is a DEMOGRAPHIC ATTRIBUTE, not a KPI
+- "Day-Part Schedule" - This is a PROCESS/SYSTEM, not a metric
+- "Ad Units" - This is a CONCEPT, not a measurable KPI
+- "CRM" - This is a SYSTEM/TOOL, not a performance metric
+
+## ACRONYM RULES
+
+ONLY add acronyms for:
+- True KPIs with industry-standard abbreviations (CPL, CPA, CTC, ROI, etc.)
+- Well-known system acronyms (CRM, IVR, LMS)
+
+NEVER add acronyms for:
+- Descriptive terms ("Currently Insured" should NOT have "CI")
+- Segment names ("Core Target Group" should NOT have "CTG")
+- Status indicators
+- Any term that is not a widely-recognized abbreviation in the industry
+
+## CALCULATION RULES
+
+ONLY add calculations for TRUE KPIs that:
+- Have a specific mathematical formula
+- Result in a number, percentage, or rate
+- Are actively tracked as performance metrics
+
+Set calculation to null for:
+- Descriptive terms
+- Processes or systems
+- Demographic attributes
+- Segment definitions
+- Anything that cannot be calculated with a formula
+
+## OUTPUT REQUIREMENTS
+
+For each term:
+- id: keep the same
+- term: keep or slightly improve formatting
+- acronym: string ONLY for true KPIs with standard abbreviations, otherwise null
+- definition: improved, 2-3 sentences, clear and professional
+- calculation: formula string ONLY for true measurable KPIs, otherwise null
+- isKPI: true ONLY if it meets ALL KPI criteria above
+- category: keep the same if provided
+- relatedTerms: keep the same if provided
 
 Here are the terms to enhance:
 
 ${JSON.stringify(batch, null, 2)}
 
-Return a JSON array with the enhanced terms. Each term should have:
-- id (keep the same)
-- term (keep or slightly improve formatting)
-- acronym (string or null - only for KPIs with common abbreviations)
-- definition (improved, 2-3 sentences)
-- calculation (string with formula for KPIs, null for non-KPIs)
-- isKPI (boolean - true if this is a measurable KPI)
-- category (keep the same if provided)
-- relatedTerms (keep the same if provided)
-
-Return ONLY the JSON array, no explanation.`;
+Return ONLY a JSON array, no explanation.`;
 
       const response = await anthropic.messages.create({
         model: 'claude-3-haiku-20240307',
