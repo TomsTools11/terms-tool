@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { BookOpen, Mail, Lock, Loader2, LogIn, UserPlus } from 'lucide-react';
+import { BookOpen, Mail, Lock, Loader2, LogIn, UserPlus, AlertTriangle } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -13,6 +13,29 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
 
   const supabase = createClient();
+
+  // Show configuration error if Supabase isn't set up
+  if (!supabase) {
+    return (
+      <div className="min-h-screen bg-[var(--color-bg-primary)] flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <AlertTriangle className="h-10 w-10 text-[var(--color-warning)]" />
+          </div>
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)] mb-2">Configuration Required</h1>
+          <p className="text-[var(--color-text-muted)] mb-4">
+            Supabase is not configured. Please add the following environment variables:
+          </p>
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 text-left">
+            <code className="text-sm text-[var(--color-text-secondary)]">
+              NEXT_PUBLIC_SUPABASE_URL<br />
+              NEXT_PUBLIC_SUPABASE_ANON_KEY
+            </code>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
