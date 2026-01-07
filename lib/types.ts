@@ -21,6 +21,12 @@ export interface ExtractedTerm {
   sourceContext?: string;
   selected: boolean;
   isEditing?: boolean;
+  // Enhanced fields from AI
+  calculation?: string;
+  category?: string;
+  relatedTerms?: string[];
+  isKPI?: boolean;
+  isEnhanced?: boolean;
 }
 
 export interface ExtractionResult {

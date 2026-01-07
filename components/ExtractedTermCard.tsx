@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ExtractedTerm } from '@/lib/types';
-import { Check, Pencil, X, AlertCircle } from 'lucide-react';
+import { Check, Pencil, X, AlertCircle, Calculator, Sparkles } from 'lucide-react';
 
 interface ExtractedTermCardProps {
   term: ExtractedTerm;
@@ -78,6 +78,18 @@ export default function ExtractedTermCard({
                   {term.acronym}
                 </span>
               )}
+              {term.isKPI && (
+                <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-success)]/20 text-[var(--color-success)] rounded">
+                  <Calculator className="h-3 w-3" />
+                  KPI
+                </span>
+              )}
+              {term.isEnhanced && (
+                <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[#7c3aed]/20 text-[#7c3aed] rounded">
+                  <Sparkles className="h-3 w-3" />
+                  Enhanced
+                </span>
+              )}
               {isDuplicate && (
                 <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-[var(--color-warning)]/20 text-[var(--color-warning)] rounded">
                   <AlertCircle className="h-3 w-3" />
@@ -136,6 +148,28 @@ export default function ExtractedTermCard({
                   <Pencil className="h-3 w-3" />
                   Edit definition
                 </button>
+              </div>
+            )}
+
+            {/* Calculation Section for KPIs */}
+            {term.calculation && (
+              <div className="mt-3 p-3 bg-[var(--color-success)]/5 border border-[var(--color-success)]/20 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <Calculator className="h-3.5 w-3.5 text-[var(--color-success)]" />
+                  <span className="text-xs font-medium text-[var(--color-success)]">Calculation</span>
+                </div>
+                <p className="text-sm text-[var(--color-text-secondary)] font-mono">
+                  {term.calculation}
+                </p>
+              </div>
+            )}
+
+            {/* Category badge if present */}
+            {term.category && (
+              <div className="mt-2">
+                <span className="text-xs px-2 py-1 bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] rounded">
+                  {term.category}
+                </span>
               </div>
             )}
 

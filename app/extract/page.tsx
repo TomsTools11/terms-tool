@@ -7,7 +7,7 @@ import AppLayout from '@/components/AppLayout';
 import ProtectedPage from '@/components/ProtectedPage';
 import { ExtractedTerm, Term } from '@/lib/types';
 import { saveTerms, checkDuplicates } from '@/lib/database';
-import { ArrowLeft, Check, CheckCheck, Loader2, Save, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, CheckCheck, Loader2, Save, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ExtractPage() {
@@ -25,6 +25,8 @@ function ExtractPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [duplicates, setDuplicates] = useState<Set<string>>(new Set());
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isEnhanced, setIsEnhanced] = useState(false);
 
   useEffect(() => {
     const transcript = sessionStorage.getItem('termstool_transcript');
@@ -94,6 +96,59 @@ function ExtractPageContent() {
     ));
   };
 
+  const enhanceTerms = async () => {
+    setIsEnhancing(true);
+    try {
+      const response = await fetch('/api/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          terms: terms.map(t => ({
+            id: t.id,
+            term: t.term,
+            acronym: t.acronym,
+            definition: t.definition,
+            calculation: t.calculation,
+            category: t.category,
+            relatedTerms: t.relatedTerms,
+          }))
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to enhance terms');
+      }
+
+      const data = await response.json();
+
+      // Merge enhanced data back into terms
+      setTerms(prev => prev.map(term => {
+        const enhanced = data.terms.find((e: ExtractedTerm & { isKPI?: boolean }) => e.id === term.id);
+        if (enhanced) {
+          return {
+            ...term,
+            term: enhanced.term || term.term,
+            acronym: enhanced.acronym || undefined,
+            definition: enhanced.definition || term.definition,
+            calculation: enhanced.calculation || undefined,
+            category: enhanced.category || term.category,
+            relatedTerms: enhanced.relatedTerms || term.relatedTerms,
+            isKPI: enhanced.isKPI,
+            isEnhanced: true,
+          };
+        }
+        return term;
+      }));
+
+      setIsEnhanced(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Enhancement failed');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const saveSelected = async () => {
     setIsSaving(true);
     const selectedTerms = terms.filter(t => t.selected);
@@ -103,6 +158,9 @@ function ExtractPageContent() {
       term: t.term,
       acronym: t.acronym,
       definition: t.definition,
+      calculation: t.calculation,
+      category: t.category,
+      relatedTerms: t.relatedTerms,
       confidence: t.confidence,
       sourceContext: t.sourceContext,
       createdAt: new Date().toISOString(),
@@ -210,6 +268,33 @@ function ExtractPageContent() {
                   <>
                     <CheckCheck className="h-4 w-4" />
                     Select All
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={enhanceTerms}
+                disabled={isEnhancing || isEnhanced}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isEnhanced
+                    ? 'bg-[var(--color-success)]/20 text-[var(--color-success)] border border-[var(--color-success)]/30'
+                    : 'bg-gradient-to-r from-[var(--color-blue-primary)] to-[#7c3aed] text-white hover:opacity-90'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {isEnhancing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enhancing...
+                  </>
+                ) : isEnhanced ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Enhanced
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Enhance with AI
                   </>
                 )}
               </button>
