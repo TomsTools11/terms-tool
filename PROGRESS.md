@@ -157,10 +157,13 @@ interface Term {
    - Removed the button that clears the entire glossary to prevent accidental data loss
 
 6. **Remove Duplicates Feature**
-   - Button appears only when duplicate terms are detected
-   - Detects duplicates by case-insensitive name matching
+   - Button appears only when duplicate/similar terms are detected
+   - Uses fuzzy matching with Levenshtein distance (85% similarity threshold)
+   - Normalizes terms before comparison (lowercase, removes punctuation)
+   - Detects variations like "Cost-Per-Lead" vs "Cost Per Lead"
+   - Handles contained terms like "CPL" vs "CPL (Cost Per Lead)"
+   - Groups similar terms together and shows examples in confirmation
    - Keeps the most recently updated version when removing duplicates
-   - Shows count of duplicates and requires confirmation before deletion
 
 ---
 
