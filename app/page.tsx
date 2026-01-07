@@ -4,14 +4,16 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TranscriptInput from '@/components/TranscriptInput';
 import AppLayout from '@/components/AppLayout';
-import { FileText, Sparkles, BookOpen } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
+import { FileText, Sparkles, BookOpen, LogIn, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isLoading, login } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (text: string) => {
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     // Store transcript in sessionStorage for the extract page
     sessionStorage.setItem('termstool_transcript', text);
@@ -34,12 +36,41 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* Input Section */}
-        <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
-          <TranscriptInput onSubmit={handleSubmit} isLoading={isLoading} />
-        </section>
+        {/* Conditional Content based on auth state */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="h-8 w-8 text-[var(--color-blue-primary)] animate-spin" />
+          </div>
+        ) : user ? (
+          /* Logged in - show the transcript input */
+          <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+            <TranscriptInput onSubmit={handleSubmit} isLoading={isSubmitting} />
+          </section>
+        ) : (
+          /* Not logged in - show login prompt */
+          <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-8 text-center">
+            <div className="max-w-md mx-auto space-y-4">
+              <div className="w-16 h-16 bg-[var(--color-blue-primary)]/10 rounded-full flex items-center justify-center mx-auto">
+                <LogIn className="h-8 w-8 text-[var(--color-blue-primary)]" />
+              </div>
+              <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">
+                Sign in to get started
+              </h2>
+              <p className="text-[var(--color-text-muted)]">
+                Create an account or sign in with GitHub or Google to start extracting terms from your transcripts.
+              </p>
+              <button
+                onClick={login}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-[var(--color-blue-primary)] text-white rounded-lg font-medium hover:bg-[var(--color-blue-primary-hover)] transition-colors"
+              >
+                <LogIn className="h-5 w-5" />
+                Sign In to Continue
+              </button>
+            </div>
+          </section>
+        )}
 
-        {/* Features Section */}
+        {/* Features Section - always visible */}
         <section className="grid md:grid-cols-3 gap-6">
           <FeatureCard
             icon={<Sparkles className="h-6 w-6" />}
@@ -58,7 +89,7 @@ export default function HomePage() {
           />
         </section>
 
-        {/* How It Works */}
+        {/* How It Works - always visible */}
         <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-8">
           <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] mb-6 text-center">
             How It Works

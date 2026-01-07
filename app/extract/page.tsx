@@ -4,12 +4,21 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import ExtractedTermCard from '@/components/ExtractedTermCard';
 import AppLayout from '@/components/AppLayout';
+import ProtectedPage from '@/components/ProtectedPage';
 import { ExtractedTerm, Term } from '@/lib/types';
 import { saveTerms, checkDuplicates } from '@/lib/database';
 import { ArrowLeft, Check, CheckCheck, Loader2, Save, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ExtractPage() {
+  return (
+    <ProtectedPage>
+      <ExtractPageContent />
+    </ProtectedPage>
+  );
+}
+
+function ExtractPageContent() {
   const router = useRouter();
   const [terms, setTerms] = useState<ExtractedTerm[]>([]);
   const [isLoading, setIsLoading] = useState(true);

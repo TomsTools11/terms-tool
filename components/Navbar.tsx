@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Upload, Library } from 'lucide-react';
+import { BookOpen, Upload, Library, LogIn, LogOut, User, Loader2 } from 'lucide-react';
+import { useAuth } from './AuthProvider';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const { user, isLoading, login, logout } = useAuth();
 
   const navItems = [
     { href: '/', label: 'Extract', icon: Upload },
@@ -26,26 +28,61 @@ export default function Navbar() {
             </span>
           </Link>
 
-          <div className="flex items-center gap-1">
-            {navItems.map(({ href, label, icon: Icon }) => {
-              const isActive = pathname === href;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  className={`
-                    flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
-                    ${isActive
-                      ? 'bg-[var(--color-blue-primary)] text-white'
-                      : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
-                    }
-                  `}
+          <div className="flex items-center gap-4">
+            {/* Nav items - only show if logged in */}
+            {user && (
+              <div className="flex items-center gap-1">
+                {navItems.map(({ href, label, icon: Icon }) => {
+                  const isActive = pathname === href;
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      className={`
+                        flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+                        ${isActive
+                          ? 'bg-[var(--color-blue-primary)] text-white'
+                          : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]'
+                        }
+                      `}
+                    >
+                      <Icon className="h-4 w-4" />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Auth section */}
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 text-[var(--color-text-muted)] animate-spin" />
+            ) : user ? (
+              <div className="flex items-center gap-3 pl-3 border-l border-[var(--color-border)]">
+                <div className="flex items-center gap-2 text-sm text-[var(--color-text-muted)]">
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:inline max-w-[150px] truncate">
+                    {user.user_metadata?.full_name || user.email}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-colors"
+                  title="Sign out"
                 >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </Link>
-              );
-            })}
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden sm:inline">Sign out</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={login}
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-blue-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-blue-primary-hover)] transition-colors"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -5,10 +5,19 @@ import { Term } from '@/lib/types';
 import { getTerms, saveTerm, deleteTerm, downloadCSV, importFromCSV, ImportResult } from '@/lib/database';
 import TermCard from '@/components/TermCard';
 import AppLayout from '@/components/AppLayout';
+import ProtectedPage from '@/components/ProtectedPage';
 import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function GlossaryPage() {
+  return (
+    <ProtectedPage>
+      <GlossaryPageContent />
+    </ProtectedPage>
+  );
+}
+
+function GlossaryPageContent() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
