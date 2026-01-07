@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import TranscriptInput from '@/components/TranscriptInput';
+import AppLayout from '@/components/AppLayout';
 import { FileText, Sparkles, BookOpen } from 'lucide-react';
 
 export default function HomePage() {
@@ -20,55 +21,57 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-12">
-      {/* Hero Section */}
-      <section className="text-center py-8">
-        <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-text-primary)] mb-4">
-          Extract Terms from Transcripts
-        </h1>
-        <p className="text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
-          Paste a training call or meeting transcript and let AI automatically extract
-          key terms, acronyms, and industry jargon with clear definitions.
-        </p>
-      </section>
+    <AppLayout>
+      <div className="space-y-12">
+        {/* Hero Section */}
+        <section className="text-center py-8">
+          <h1 className="text-4xl md:text-5xl font-bold text-[var(--color-text-primary)] mb-4">
+            Extract Terms from Transcripts
+          </h1>
+          <p className="text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
+            Paste a training call or meeting transcript and let AI automatically extract
+            key terms, acronyms, and industry jargon with clear definitions.
+          </p>
+        </section>
 
-      {/* Input Section */}
-      <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
-        <TranscriptInput onSubmit={handleSubmit} isLoading={isLoading} />
-      </section>
+        {/* Input Section */}
+        <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-6">
+          <TranscriptInput onSubmit={handleSubmit} isLoading={isLoading} />
+        </section>
 
-      {/* Features Section */}
-      <section className="grid md:grid-cols-3 gap-6">
-        <FeatureCard
-          icon={<Sparkles className="h-6 w-6" />}
-          title="AI-Powered Extraction"
-          description="Automatically identifies industry terms, acronyms, and jargon from your transcripts"
-        />
-        <FeatureCard
-          icon={<FileText className="h-6 w-6" />}
-          title="Smart Definitions"
-          description="Generates clear, contextual definitions with confidence scores for accuracy"
-        />
-        <FeatureCard
-          icon={<BookOpen className="h-6 w-6" />}
-          title="Build Your Glossary"
-          description="Save terms to a searchable glossary that grows with your organization"
-        />
-      </section>
+        {/* Features Section */}
+        <section className="grid md:grid-cols-3 gap-6">
+          <FeatureCard
+            icon={<Sparkles className="h-6 w-6" />}
+            title="AI-Powered Extraction"
+            description="Automatically identifies industry terms, acronyms, and jargon from your transcripts"
+          />
+          <FeatureCard
+            icon={<FileText className="h-6 w-6" />}
+            title="Smart Definitions"
+            description="Generates clear, contextual definitions with confidence scores for accuracy"
+          />
+          <FeatureCard
+            icon={<BookOpen className="h-6 w-6" />}
+            title="Shared Glossary"
+            description="All team members contribute to and access the same growing term library"
+          />
+        </section>
 
-      {/* How It Works */}
-      <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-8">
-        <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] mb-6 text-center">
-          How It Works
-        </h2>
-        <div className="grid md:grid-cols-4 gap-6">
-          <Step number={1} title="Upload" description="Paste or upload your transcript" />
-          <Step number={2} title="Extract" description="AI identifies key terms" />
-          <Step number={3} title="Review" description="Edit and approve definitions" />
-          <Step number={4} title="Save" description="Add to your glossary" />
-        </div>
-      </section>
-    </div>
+        {/* How It Works */}
+        <section className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl p-8">
+          <h2 className="text-2xl font-semibold text-[var(--color-text-primary)] mb-6 text-center">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-4 gap-6">
+            <Step number={1} title="Upload" description="Paste or upload your transcript" />
+            <Step number={2} title="Extract" description="AI identifies key terms" />
+            <Step number={3} title="Review" description="Edit and approve definitions" />
+            <Step number={4} title="Save" description="Add to shared glossary" />
+          </div>
+        </section>
+      </div>
+    </AppLayout>
   );
 }
 

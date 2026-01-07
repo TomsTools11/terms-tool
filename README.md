@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TermsTool
 
-## Getting Started
+A web application for extracting and defining key terms from meeting transcripts and training calls. Uses Claude AI to automatically identify and define domain-specific terminology.
 
-First, run the development server:
+## Features
+
+- **Transcript Analysis**: Paste or upload transcripts to extract key terms
+- **AI-Powered Definitions**: Claude AI generates definitions for extracted terms
+- **Shared Glossary**: All authenticated users share a common glossary
+- **CSV Import/Export**: Import existing term lists or export your glossary
+- **Search & Filter**: Quickly find terms in your growing glossary
+
+## Tech Stack
+
+- Next.js 15 (App Router)
+- TypeScript
+- Tailwind CSS
+- Supabase (Authentication & Database)
+- Anthropic Claude API
+
+## Setup
+
+### Prerequisites
+
+- Node.js 18+
+- An Anthropic API key
+- A Supabase project
+
+### 1. Clone and Install
+
+```bash
+git clone https://github.com/TomsTools11/terms-tool.git
+cd terms-tool
+npm install
+```
+
+### 2. Set Up Supabase
+
+1. Create a new project at [supabase.com](https://supabase.com)
+2. Go to the SQL Editor and run the schema from `supabase-schema.sql`
+3. Enable Email authentication in Authentication > Providers
+4. Copy your project URL and anon key from Settings > API
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file:
+
+```bash
+ANTHROPIC_API_KEY=your-anthropic-api-key
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 4. Run Development Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deployment (Netlify)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Connect your GitHub repository to Netlify
+2. Set environment variables in Netlify:
+   - `ANTHROPIC_API_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+3. Deploy
 
-## Learn More
+## Usage
 
-To learn more about Next.js, take a look at the following resources:
+1. **Sign up/Login**: Create an account or sign in
+2. **Upload Transcript**: Paste text or upload a .txt file on the home page
+3. **Review Terms**: AI extracts terms with definitions - select which to keep
+4. **Build Glossary**: Save terms to your shared glossary
+5. **Export**: Download your glossary as CSV anytime
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## CSV Format
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+When importing terms, use this CSV format:
 
-## Deploy on Vercel
+```csv
+Term,Acronym,Priority,Related,Definition,Calculation,Additional Notes
+Quote-to-Close,QTC,Top Priority,"- Related Term 1",Definition here,Formula here,Notes here
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
