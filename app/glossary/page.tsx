@@ -340,7 +340,7 @@ function GlossaryPageContent() {
 
           {/* Terms Grid */}
           {sortedTerms.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {sortedTerms.map(term => (
                 <TermCard
                   key={term.id}
