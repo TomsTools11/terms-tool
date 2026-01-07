@@ -2,7 +2,7 @@
 
 import { useState, KeyboardEvent } from 'react';
 import { Term } from '@/lib/types';
-import { Pencil, Trash2, Check, X, Calculator, Link2, Tag, Plus } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Calculator, Link2, Tag, Plus, Sparkles, Loader2 } from 'lucide-react';
 
 interface TermCardProps {
   term: Term;
@@ -165,6 +165,52 @@ function PrioritySelect({
 
 export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isReviewing, setIsReviewing] = useState(false);
+
+  // AI Review function - calls enhance API for this single term
+  const handleAIReview = async () => {
+    setIsReviewing(true);
+    try {
+      const response = await fetch('/api/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          terms: [{
+            id: term.id,
+            term: term.term,
+            acronym: term.acronym,
+            definition: term.definition,
+            calculation: term.calculation,
+            category: term.category,
+            relatedTerms: term.relatedTerms,
+          }]
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to enhance term');
+      }
+
+      const data = await response.json();
+      if (data.terms && data.terms.length > 0) {
+        const enhanced = data.terms[0];
+        onEdit({
+          ...term,
+          term: enhanced.term || term.term,
+          acronym: enhanced.acronym || undefined,
+          definition: enhanced.definition || term.definition,
+          calculation: enhanced.calculation || undefined,
+          category: enhanced.category || term.category,
+          relatedTerms: enhanced.relatedTerms || term.relatedTerms,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error('AI Review failed:', error);
+    } finally {
+      setIsReviewing(false);
+    }
+  };
 
   // Edit state for all fields
   const [editedTerm, setEditedTerm] = useState(term.term);
@@ -313,6 +359,19 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
       <div className="p-4">
         {/* Action Buttons - Top Right */}
         <div className="flex items-center gap-1 float-right -mt-1 -mr-1">
+          <button
+            onClick={handleAIReview}
+            disabled={isReviewing}
+            className="p-1.5 text-[var(--color-text-muted)] hover:text-[#7c3aed] hover:bg-[#7c3aed]/10 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="AI Review"
+            title="AI Review - Adds calculations for KPIs, removes unnecessary acronyms"
+          >
+            {isReviewing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="h-3.5 w-3.5" />
+            )}
+          </button>
           <button
             onClick={handleStartEdit}
             className="p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-blue-primary)] hover:bg-[var(--color-blue-primary)]/10 rounded-lg transition-colors"
