@@ -76,8 +76,9 @@ Each term has the following fields:
 terms-tool/
 ├── app/
 │   ├── api/
-│   │   ├── enhance/route.ts    # AI enhancement endpoint
-│   │   └── extract/route.ts    # AI term extraction endpoint
+│   │   ├── enhance/route.ts       # AI enhancement endpoint
+│   │   ├── extract/route.ts       # AI term extraction endpoint
+│   │   └── find-duplicates/route.ts # AI duplicate detection endpoint
 │   ├── extract/page.tsx        # Extracted terms review page
 │   ├── glossary/page.tsx       # Glossary management page
 │   ├── globals.css             # Global styles + CSS variables
@@ -164,6 +165,14 @@ interface Term {
    - Handles contained terms like "CPL" vs "CPL (Cost Per Lead)"
    - Groups similar terms together and shows examples in confirmation
    - Keeps the most recently updated version when removing duplicates
+
+7. **AI Duplicate Detection**
+   - "Find Duplicates with AI" button for semantic analysis
+   - Uses Claude to analyze terms by meaning, not just name similarity
+   - Detects semantic duplicates (e.g., "CPL" and "Cost Per Lead" as separate entries)
+   - Identifies acronym matches and overlapping concepts
+   - Shows results in expandable panel with explanations for each group
+   - "Keep Newest" button to remove duplicates per group individually
 
 ---
 
