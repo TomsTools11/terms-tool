@@ -6,8 +6,10 @@ import { getTerms, saveTerm, deleteTerm, clearAllTerms, downloadCSV, importFromC
 import TermCard from '@/components/TermCard';
 import AppLayout from '@/components/AppLayout';
 import ProtectedPage from '@/components/ProtectedPage';
-import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Trash2 } from 'lucide-react';
+import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Trash2, Calculator, Filter } from 'lucide-react';
 import Link from 'next/link';
+
+type FilterType = 'all' | 'kpi' | 'top' | 'medium' | 'low';
 
 export default function GlossaryPage() {
   return (
@@ -20,6 +22,7 @@ export default function GlossaryPage() {
 function GlossaryPageContent() {
   const [terms, setTerms] = useState<Term[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -38,17 +41,45 @@ function GlossaryPageContent() {
     setIsLoaded(true);
   };
 
-  const filteredTerms = useMemo(() => {
-    if (!searchQuery.trim()) return terms;
+  // Statistics
+  const stats = useMemo(() => {
+    const kpiCount = terms.filter(t => t.calculation && t.calculation.trim().length > 0).length;
+    const topPriority = terms.filter(t => t.category?.toLowerCase().includes('top') || t.category?.toLowerCase().includes('high')).length;
+    const mediumPriority = terms.filter(t => t.category?.toLowerCase().includes('medium') || t.category?.toLowerCase().includes('mid')).length;
+    const lowPriority = terms.filter(t => t.category?.toLowerCase().includes('low')).length;
 
-    const query = searchQuery.toLowerCase();
-    return terms.filter(term =>
-      term.term.toLowerCase().includes(query) ||
-      term.definition.toLowerCase().includes(query) ||
-      term.acronym?.toLowerCase().includes(query) ||
-      term.category?.toLowerCase().includes(query)
-    );
-  }, [terms, searchQuery]);
+    return { kpiCount, topPriority, mediumPriority, lowPriority };
+  }, [terms]);
+
+  const filteredTerms = useMemo(() => {
+    let filtered = terms;
+
+    // Apply filter
+    if (activeFilter === 'kpi') {
+      filtered = filtered.filter(t => t.calculation && t.calculation.trim().length > 0);
+    } else if (activeFilter === 'top') {
+      filtered = filtered.filter(t => t.category?.toLowerCase().includes('top') || t.category?.toLowerCase().includes('high'));
+    } else if (activeFilter === 'medium') {
+      filtered = filtered.filter(t => t.category?.toLowerCase().includes('medium') || t.category?.toLowerCase().includes('mid'));
+    } else if (activeFilter === 'low') {
+      filtered = filtered.filter(t => t.category?.toLowerCase().includes('low'));
+    }
+
+    // Apply search
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(term =>
+        term.term.toLowerCase().includes(query) ||
+        term.definition.toLowerCase().includes(query) ||
+        term.acronym?.toLowerCase().includes(query) ||
+        term.category?.toLowerCase().includes(query) ||
+        term.calculation?.toLowerCase().includes(query) ||
+        term.relatedTerms?.some(r => r.toLowerCase().includes(query))
+      );
+    }
+
+    return filtered;
+  }, [terms, searchQuery, activeFilter]);
 
   const sortedTerms = useMemo(() => {
     return [...filteredTerms].sort((a, b) => a.term.localeCompare(b.term));
@@ -88,18 +119,24 @@ function GlossaryPageContent() {
       await loadTerms();
       setIsImporting(false);
 
-      // Clear the file input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
 
-      // Auto-dismiss success message after 5 seconds
       if (result.errors.length === 0) {
         setTimeout(() => setImportResult(null), 5000);
       }
     };
     reader.readAsText(file);
   };
+
+  const filterButtons: { id: FilterType; label: string; count: number; icon?: React.ReactNode }[] = [
+    { id: 'all', label: 'All Terms', count: terms.length },
+    { id: 'kpi', label: 'KPIs', count: stats.kpiCount, icon: <Calculator className="h-3.5 w-3.5" /> },
+    { id: 'top', label: 'Top Priority', count: stats.topPriority },
+    { id: 'medium', label: 'Medium', count: stats.mediumPriority },
+    { id: 'low', label: 'Low', count: stats.lowPriority },
+  ];
 
   return (
     <AppLayout>
@@ -149,17 +186,17 @@ function GlossaryPageContent() {
       ) : (
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
                 Glossary
               </h1>
               <p className="text-[var(--color-text-muted)] mt-1">
-                {terms.length} term{terms.length !== 1 ? 's' : ''} in your glossary
+                {terms.length} term{terms.length !== 1 ? 's' : ''} • {stats.kpiCount} KPI{stats.kpiCount !== 1 ? 's' : ''} with calculations
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 bg-[var(--color-blue-primary)] text-white rounded-lg text-sm font-medium hover:bg-[var(--color-blue-primary-hover)] transition-colors"
@@ -173,7 +210,7 @@ function GlossaryPageContent() {
                 ) : (
                   <Upload className="h-4 w-4" />
                 )}
-                Import CSV
+                Import
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -188,14 +225,14 @@ function GlossaryPageContent() {
                 className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
               >
                 <Download className="h-4 w-4" />
-                Export CSV
+                Export
               </button>
               <button
                 onClick={handleClearAll}
                 className="flex items-center gap-2 px-4 py-2 bg-[var(--color-error)]/10 border border-[var(--color-error)]/30 rounded-lg text-sm font-medium text-[var(--color-error)] hover:bg-[var(--color-error)]/20 transition-colors"
               >
                 <Trash2 className="h-4 w-4" />
-                Clear All
+                Clear
               </button>
             </div>
           </div>
@@ -239,28 +276,71 @@ function GlossaryPageContent() {
             </div>
           )}
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--color-text-muted)]" />
-            <input
-              type="text"
-              placeholder="Search terms, definitions, or acronyms..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-blue-primary)] focus:ring-1 focus:ring-[var(--color-blue-primary)] transition-colors"
-            />
+          {/* Search & Filters */}
+          <div className="space-y-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--color-text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search terms, definitions, acronyms, or calculations..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-blue-primary)] focus:ring-1 focus:ring-[var(--color-blue-primary)] transition-colors"
+              />
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <Filter className="h-4 w-4 text-[var(--color-text-muted)] flex-shrink-0" />
+              {filterButtons.map(filter => (
+                <button
+                  key={filter.id}
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                    activeFilter === filter.id
+                      ? 'bg-[var(--color-blue-primary)] text-white'
+                      : 'bg-[var(--color-bg-secondary)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-blue-primary)]/50'
+                  }`}
+                >
+                  {filter.icon}
+                  {filter.label}
+                  <span className={`text-xs px-1.5 py-0.5 rounded ${
+                    activeFilter === filter.id
+                      ? 'bg-white/20 text-white'
+                      : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]'
+                  }`}>
+                    {filter.count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Results info */}
-          {searchQuery && (
-            <p className="text-sm text-[var(--color-text-muted)]">
-              {filteredTerms.length} result{filteredTerms.length !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
-            </p>
+          {(searchQuery || activeFilter !== 'all') && (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--color-text-muted)]">
+                Showing {filteredTerms.length} of {terms.length} terms
+                {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
+              </p>
+              {(searchQuery || activeFilter !== 'all') && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setActiveFilter('all');
+                  }}
+                  className="text-sm text-[var(--color-blue-primary)] hover:underline"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
           )}
 
           {/* Terms Grid */}
           {sortedTerms.length > 0 ? (
-            <div className="grid gap-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
               {sortedTerms.map(term => (
                 <TermCard
                   key={term.id}
@@ -271,10 +351,20 @@ function GlossaryPageContent() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
+            <div className="text-center py-12 bg-[var(--color-bg-secondary)] rounded-xl border border-[var(--color-border)]">
+              <Search className="h-10 w-10 text-[var(--color-text-muted)] mx-auto mb-3" />
               <p className="text-[var(--color-text-muted)]">
-                No terms match your search.
+                No terms match your current filters.
               </p>
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setActiveFilter('all');
+                }}
+                className="mt-2 text-sm text-[var(--color-blue-primary)] hover:underline"
+              >
+                Clear all filters
+              </button>
             </div>
           )}
         </div>
