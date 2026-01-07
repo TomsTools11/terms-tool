@@ -36,6 +36,11 @@ function termToRow(term: Omit<Term, 'createdAt' | 'updatedAt'>) {
 export async function getTerms(): Promise<Term[]> {
   const supabase = createClient();
 
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('terms')
     .select('*')
@@ -51,6 +56,11 @@ export async function getTerms(): Promise<Term[]> {
 
 export async function getTerm(id: string): Promise<Term | null> {
   const supabase = createClient();
+
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('terms')
@@ -69,6 +79,11 @@ export async function getTerm(id: string): Promise<Term | null> {
 export async function saveTerm(term: Term): Promise<Term | null> {
   const supabase = createClient();
 
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return null;
+  }
+
   const { data, error } = await supabase
     .from('terms')
     .upsert(termToRow(term))
@@ -85,6 +100,11 @@ export async function saveTerm(term: Term): Promise<Term | null> {
 
 export async function saveTerms(terms: Term[]): Promise<number> {
   const supabase = createClient();
+
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return 0;
+  }
 
   const rows = terms.map(termToRow);
 
@@ -104,6 +124,11 @@ export async function saveTerms(terms: Term[]): Promise<number> {
 export async function deleteTerm(id: string): Promise<boolean> {
   const supabase = createClient();
 
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return false;
+  }
+
   const { error } = await supabase
     .from('terms')
     .delete()
@@ -119,6 +144,11 @@ export async function deleteTerm(id: string): Promise<boolean> {
 
 export async function searchTerms(query: string): Promise<Term[]> {
   const supabase = createClient();
+
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return [];
+  }
 
   if (!query.trim()) {
     return getTerms();
@@ -140,6 +170,11 @@ export async function searchTerms(query: string): Promise<Term[]> {
 
 export async function checkDuplicates(termName: string): Promise<Term | null> {
   const supabase = createClient();
+
+  if (!supabase) {
+    console.error('Supabase not configured');
+    return null;
+  }
 
   const { data, error } = await supabase
     .from('terms')
