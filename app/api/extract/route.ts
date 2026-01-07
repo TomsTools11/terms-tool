@@ -14,6 +14,15 @@ interface ExtractedTerm {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check for API key
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error('ANTHROPIC_API_KEY is not configured');
+      return NextResponse.json(
+        { error: 'API key not configured. Please set ANTHROPIC_API_KEY environment variable.' },
+        { status: 500 }
+      );
+    }
+
     const { transcript } = await request.json();
 
     if (!transcript || typeof transcript !== 'string') {
@@ -98,8 +107,23 @@ Aim for 5-20 terms depending on the transcript content. Quality over quantity.`;
     });
   } catch (error) {
     console.error('Extraction error:', error);
+
+    // Provide more specific error messages
+    let errorMessage = 'Failed to extract terms';
+    if (error instanceof Error) {
+      if (error.message.includes('API key')) {
+        errorMessage = 'Invalid or missing API key';
+      } else if (error.message.includes('rate limit')) {
+        errorMessage = 'Rate limit exceeded. Please try again later.';
+      } else if (error.message.includes('context length') || error.message.includes('too long')) {
+        errorMessage = 'Transcript is too long. Please use a shorter transcript.';
+      } else {
+        errorMessage = error.message;
+      }
+    }
+
     return NextResponse.json(
-      { error: 'Failed to extract terms' },
+      { error: errorMessage },
       { status: 500 }
     );
   }

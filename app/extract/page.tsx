@@ -48,7 +48,8 @@ function ExtractPageContent() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to extract terms');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to extract terms');
       }
 
       const data = await response.json();
