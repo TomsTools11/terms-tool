@@ -40,7 +40,6 @@ TermsTool is a web application for extracting, managing, and organizing industry
 - Filter by priority (Top/Medium/Low based on tags)
 - Edit terms inline (click Edit button on card)
 - Delete individual terms
-- Clear all terms option
 
 ### 3. Term Card Fields
 Each term has the following fields:
