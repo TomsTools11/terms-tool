@@ -113,45 +113,124 @@ function GlossaryPageContent() {
     downloadCSV(terms, `glossary-${new Date().toISOString().split('T')[0]}.csv`);
   };
 
-  // Find duplicate terms (same name, case-insensitive)
-  const duplicateCount = useMemo(() => {
-    const seen = new Map<string, number>();
-    let count = 0;
-    terms.forEach(term => {
-      const key = term.term.toLowerCase().trim();
-      const existing = seen.get(key) || 0;
-      seen.set(key, existing + 1);
-      if (existing > 0) count++;
-    });
-    return count;
+  // Normalize a term name for comparison (lowercase, remove punctuation, normalize spaces)
+  const normalizeTerm = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')  // Replace punctuation with spaces
+      .replace(/\s+/g, ' ')           // Normalize multiple spaces
+      .trim();
+  };
+
+  // Calculate Levenshtein distance between two strings
+  const levenshteinDistance = (a: string, b: string): number => {
+    const matrix: number[][] = [];
+    for (let i = 0; i <= b.length; i++) {
+      matrix[i] = [i];
+    }
+    for (let j = 0; j <= a.length; j++) {
+      matrix[0][j] = j;
+    }
+    for (let i = 1; i <= b.length; i++) {
+      for (let j = 1; j <= a.length; j++) {
+        if (b.charAt(i - 1) === a.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  };
+
+  // Calculate similarity percentage (0-100)
+  const similarity = (a: string, b: string): number => {
+    const maxLen = Math.max(a.length, b.length);
+    if (maxLen === 0) return 100;
+    const distance = levenshteinDistance(a, b);
+    return ((maxLen - distance) / maxLen) * 100;
+  };
+
+  // Check if two terms are similar enough to be considered duplicates
+  const areSimilar = (term1: string, term2: string): boolean => {
+    const norm1 = normalizeTerm(term1);
+    const norm2 = normalizeTerm(term2);
+
+    // Exact match after normalization
+    if (norm1 === norm2) return true;
+
+    // Check if one contains the other (for cases like "CPL" vs "CPL (Cost Per Lead)")
+    if (norm1.includes(norm2) || norm2.includes(norm1)) {
+      const shorter = norm1.length < norm2.length ? norm1 : norm2;
+      const longer = norm1.length < norm2.length ? norm2 : norm1;
+      // Only consider it a match if the shorter is a significant portion
+      if (shorter.length >= 3 && shorter.length / longer.length > 0.5) return true;
+    }
+
+    // Similarity threshold (85% similar)
+    return similarity(norm1, norm2) >= 85;
+  };
+
+  // Find duplicate/similar terms using Union-Find to group similar terms
+  const duplicateGroups = useMemo(() => {
+    const groups: Term[][] = [];
+    const assigned = new Set<string>();
+
+    for (let i = 0; i < terms.length; i++) {
+      if (assigned.has(terms[i].id)) continue;
+
+      const group: Term[] = [terms[i]];
+      assigned.add(terms[i].id);
+
+      for (let j = i + 1; j < terms.length; j++) {
+        if (assigned.has(terms[j].id)) continue;
+
+        // Check if this term is similar to any term in the current group
+        const isSimilarToGroup = group.some(t => areSimilar(t.term, terms[j].term));
+        if (isSimilarToGroup) {
+          group.push(terms[j]);
+          assigned.add(terms[j].id);
+        }
+      }
+
+      if (group.length > 1) {
+        groups.push(group);
+      }
+    }
+
+    return groups;
   }, [terms]);
+
+  const duplicateCount = useMemo(() => {
+    return duplicateGroups.reduce((sum, group) => sum + group.length - 1, 0);
+  }, [duplicateGroups]);
 
   const handleRemoveDuplicates = async () => {
     if (duplicateCount === 0) return;
 
-    if (!window.confirm(`Remove ${duplicateCount} duplicate term${duplicateCount > 1 ? 's' : ''}? This will keep the most recently updated version of each term.`)) {
+    // Build a list of duplicates to show in confirmation
+    const examples = duplicateGroups.slice(0, 3).map(group =>
+      group.map(t => `"${t.term}"`).join(', ')
+    ).join('\n• ');
+
+    if (!window.confirm(
+      `Found ${duplicateGroups.length} group${duplicateGroups.length > 1 ? 's' : ''} of similar terms (${duplicateCount} duplicate${duplicateCount > 1 ? 's' : ''} to remove).\n\nExamples:\n• ${examples}\n\nKeep the most recently updated version of each?`
+    )) {
       return;
     }
 
-    // Group terms by lowercase name
-    const termGroups = new Map<string, Term[]>();
-    terms.forEach(term => {
-      const key = term.term.toLowerCase().trim();
-      const group = termGroups.get(key) || [];
-      group.push(term);
-      termGroups.set(key, group);
-    });
-
-    // For each group with duplicates, keep the most recently updated and delete the rest
+    // For each group, keep the most recently updated and delete the rest
     const toDelete: string[] = [];
-    termGroups.forEach(group => {
-      if (group.length > 1) {
-        // Sort by updatedAt descending (most recent first)
-        group.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        // Keep the first one (most recent), delete the rest
-        for (let i = 1; i < group.length; i++) {
-          toDelete.push(group[i].id);
-        }
+    duplicateGroups.forEach(group => {
+      // Sort by updatedAt descending (most recent first)
+      group.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      // Keep the first one (most recent), delete the rest
+      for (let i = 1; i < group.length; i++) {
+        toDelete.push(group[i].id);
       }
     });
 
