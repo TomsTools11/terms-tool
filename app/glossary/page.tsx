@@ -43,12 +43,24 @@ function GlossaryPageContent() {
     setIsLoaded(true);
   };
 
+  // Helper to check if term has a specific tag type (checks both tags and legacy category)
+  const hasTagType = (term: Term, type: 'top' | 'medium' | 'low'): boolean => {
+    const allTags = [...(term.tags || []), term.category].filter(Boolean);
+    return allTags.some(tag => {
+      const lower = tag?.toLowerCase() || '';
+      if (type === 'top') return lower.includes('top') || lower.includes('high');
+      if (type === 'medium') return lower.includes('medium') || lower.includes('mid');
+      if (type === 'low') return lower.includes('low');
+      return false;
+    });
+  };
+
   // Statistics
   const stats = useMemo(() => {
     const kpiCount = terms.filter(t => t.calculation && t.calculation.trim().length > 0).length;
-    const topPriority = terms.filter(t => t.category?.toLowerCase().includes('top') || t.category?.toLowerCase().includes('high')).length;
-    const mediumPriority = terms.filter(t => t.category?.toLowerCase().includes('medium') || t.category?.toLowerCase().includes('mid')).length;
-    const lowPriority = terms.filter(t => t.category?.toLowerCase().includes('low')).length;
+    const topPriority = terms.filter(t => hasTagType(t, 'top')).length;
+    const mediumPriority = terms.filter(t => hasTagType(t, 'medium')).length;
+    const lowPriority = terms.filter(t => hasTagType(t, 'low')).length;
 
     return { kpiCount, topPriority, mediumPriority, lowPriority };
   }, [terms]);
@@ -60,11 +72,11 @@ function GlossaryPageContent() {
     if (activeFilter === 'kpi') {
       filtered = filtered.filter(t => t.calculation && t.calculation.trim().length > 0);
     } else if (activeFilter === 'top') {
-      filtered = filtered.filter(t => t.category?.toLowerCase().includes('top') || t.category?.toLowerCase().includes('high'));
+      filtered = filtered.filter(t => hasTagType(t, 'top'));
     } else if (activeFilter === 'medium') {
-      filtered = filtered.filter(t => t.category?.toLowerCase().includes('medium') || t.category?.toLowerCase().includes('mid'));
+      filtered = filtered.filter(t => hasTagType(t, 'medium'));
     } else if (activeFilter === 'low') {
-      filtered = filtered.filter(t => t.category?.toLowerCase().includes('low'));
+      filtered = filtered.filter(t => hasTagType(t, 'low'));
     }
 
     // Apply search
@@ -74,7 +86,7 @@ function GlossaryPageContent() {
         term.term.toLowerCase().includes(query) ||
         term.definition.toLowerCase().includes(query) ||
         term.acronym?.toLowerCase().includes(query) ||
-        term.category?.toLowerCase().includes(query) ||
+        term.tags?.some(t => t.toLowerCase().includes(query)) ||
         term.calculation?.toLowerCase().includes(query) ||
         term.relatedTerms?.some(r => r.toLowerCase().includes(query))
       );
@@ -157,7 +169,7 @@ function GlossaryPageContent() {
               acronym: t.acronym,
               definition: t.definition,
               calculation: t.calculation,
-              category: t.category,
+              tags: t.tags || (t.category ? [t.category] : []),
               relatedTerms: t.relatedTerms,
             }))
           }),
@@ -175,7 +187,7 @@ function GlossaryPageContent() {
                   acronym: enhanced.acronym || undefined,
                   definition: enhanced.definition || original.definition,
                   calculation: enhanced.calculation || undefined,
-                  category: enhanced.category || original.category,
+                  tags: enhanced.tags || original.tags || (original.category ? [original.category] : undefined),
                   relatedTerms: enhanced.relatedTerms || original.relatedTerms,
                   updatedAt: new Date().toISOString()
                 });

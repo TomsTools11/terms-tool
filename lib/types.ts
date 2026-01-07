@@ -3,13 +3,15 @@ export interface Term {
   term: string;
   acronym?: string;
   definition: string;
-  category?: string;
+  tags?: string[];
   relatedTerms?: string[];
   calculation?: string;
   confidence?: number;
   sourceContext?: string;
   createdAt: string;
   updatedAt: string;
+  // Deprecated - use tags instead
+  category?: string;
 }
 
 export interface ExtractedTerm {
@@ -23,10 +25,12 @@ export interface ExtractedTerm {
   isEditing?: boolean;
   // Enhanced fields from AI
   calculation?: string;
-  category?: string;
+  tags?: string[];
   relatedTerms?: string[];
   isKPI?: boolean;
   isEnhanced?: boolean;
+  // Deprecated - use tags instead
+  category?: string;
 }
 
 export interface ExtractionResult {

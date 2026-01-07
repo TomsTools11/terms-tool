@@ -2,7 +2,7 @@
 
 import { useState, KeyboardEvent } from 'react';
 import { Term } from '@/lib/types';
-import { Pencil, Trash2, Check, X, Calculator, Link2, Tag, Plus, Sparkles, Loader2 } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Calculator, Link2, Tag, Sparkles, Loader2 } from 'lucide-react';
 
 interface TermCardProps {
   term: Term;
@@ -15,57 +15,56 @@ function isKPI(term: Term): boolean {
   return !!term.calculation && term.calculation.trim().length > 0;
 }
 
-// Helper to get priority color classes
-function getPriorityStyles(category?: string): { bg: string; text: string; border: string } {
-  if (!category) return { bg: 'bg-[var(--color-bg-elevated)]', text: 'text-[var(--color-text-muted)]', border: 'border-[var(--color-border)]' };
+// Preset tag suggestions
+const TAG_SUGGESTIONS = ['Top Priority', 'Medium Priority', 'Low Priority'];
 
-  const lowerCategory = category.toLowerCase();
-  if (lowerCategory.includes('top') || lowerCategory.includes('high')) {
+// Helper to get tag style based on tag name
+function getTagStyles(tag: string): { bg: string; text: string; border: string } {
+  const lowerTag = tag.toLowerCase();
+  if (lowerTag.includes('top') || lowerTag.includes('high')) {
     return { bg: 'bg-[var(--color-error)]/10', text: 'text-[var(--color-error)]', border: 'border-[var(--color-error)]/30' };
   }
-  if (lowerCategory.includes('medium') || lowerCategory.includes('mid')) {
+  if (lowerTag.includes('medium') || lowerTag.includes('mid')) {
     return { bg: 'bg-[var(--color-warning)]/10', text: 'text-[var(--color-warning)]', border: 'border-[var(--color-warning)]/30' };
   }
-  if (lowerCategory.includes('low')) {
+  if (lowerTag.includes('low')) {
     return { bg: 'bg-[var(--color-success)]/10', text: 'text-[var(--color-success)]', border: 'border-[var(--color-success)]/30' };
   }
   return { bg: 'bg-[var(--color-bg-elevated)]', text: 'text-[var(--color-text-muted)]', border: 'border-[var(--color-border)]' };
 }
 
-// Tag Input Component
+// Tag Input Component with suggestions
 function TagInput({
   tags,
   onTagsChange,
   placeholder,
   label,
-  singleTag = false,
+  suggestions = [],
 }: {
   tags: string[];
   onTagsChange: (tags: string[]) => void;
   placeholder: string;
   label: string;
-  singleTag?: boolean;
+  suggestions?: string[];
 }) {
   const [inputValue, setInputValue] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
-      addTag();
+      addTag(inputValue);
     } else if (e.key === 'Backspace' && inputValue === '' && tags.length > 0) {
       onTagsChange(tags.slice(0, -1));
     }
   };
 
-  const addTag = () => {
-    const value = inputValue.trim();
-    if (value && !tags.includes(value)) {
-      if (singleTag) {
-        onTagsChange([value]);
-      } else {
-        onTagsChange([...tags, value]);
-      }
+  const addTag = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed && !tags.includes(trimmed)) {
+      onTagsChange([...tags, trimmed]);
       setInputValue('');
+      setShowSuggestions(false);
     }
   };
 
@@ -73,92 +72,69 @@ function TagInput({
     onTagsChange(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const availableSuggestions = suggestions.filter(s => !tags.includes(s));
+
   return (
     <div>
       <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1 uppercase tracking-wide">
         {label}
       </label>
-      <div className="flex flex-wrap gap-1 p-2 bg-[var(--color-form)] border border-[var(--color-border)] rounded-lg focus-within:border-[var(--color-blue-primary)] focus-within:ring-1 focus-within:ring-[var(--color-blue-primary)] min-h-[36px]">
-        {tags.map((tag, index) => (
-          <span
-            key={index}
-            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-[var(--color-blue-primary)]/20 text-[var(--color-blue-primary)] rounded border border-[var(--color-blue-primary)]/30"
-          >
-            {tag}
-            <button
-              type="button"
-              onClick={() => removeTag(tag)}
-              className="hover:text-[var(--color-error)] transition-colors"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        <input
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onBlur={addTag}
-          placeholder={tags.length === 0 ? placeholder : ''}
-          className="flex-1 min-w-[80px] bg-transparent text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-muted)] outline-none"
-        />
-      </div>
-      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-        Press Enter or comma to add
-      </p>
-    </div>
-  );
-}
-
-// Priority Select Component
-const PRIORITY_OPTIONS = ['Top Priority', 'Medium Priority', 'Low Priority'];
-
-function PrioritySelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const [isCustom, setIsCustom] = useState(!PRIORITY_OPTIONS.includes(value) && value !== '');
-
-  return (
-    <div>
-      <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1 uppercase tracking-wide">
-        Category / Priority
-      </label>
-      <div className="flex gap-2">
-        <select
-          value={isCustom ? '__custom__' : value}
-          onChange={(e) => {
-            if (e.target.value === '__custom__') {
-              setIsCustom(true);
-              onChange('');
-            } else {
-              setIsCustom(false);
-              onChange(e.target.value);
-            }
-          }}
-          className="flex-1 p-2 bg-[var(--color-form)] border border-[var(--color-border)] rounded-lg text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-blue-primary)] focus:ring-1 focus:ring-[var(--color-blue-primary)]"
-        >
-          <option value="">No category</option>
-          {PRIORITY_OPTIONS.map(opt => (
-            <option key={opt} value={opt}>{opt}</option>
-          ))}
-          <option value="__custom__">Custom...</option>
-        </select>
-        {isCustom && (
+      <div className="relative">
+        <div className="flex flex-wrap gap-1 p-2 bg-[var(--color-form)] border border-[var(--color-border)] rounded-lg focus-within:border-[var(--color-blue-primary)] focus-within:ring-1 focus-within:ring-[var(--color-blue-primary)] min-h-[36px]">
+          {tags.map((tag, index) => {
+            const styles = getTagStyles(tag);
+            return (
+              <span
+                key={index}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${styles.bg} ${styles.text} ${styles.border}`}
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="hover:opacity-70 transition-opacity"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            );
+          })}
           <input
             type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Custom category"
-            className="flex-1 p-2 bg-[var(--color-form)] border border-[var(--color-border)] rounded-lg text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-blue-primary)] focus:ring-1 focus:ring-[var(--color-blue-primary)]"
-            autoFocus
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setShowSuggestions(true)}
+            onBlur={() => {
+              setTimeout(() => setShowSuggestions(false), 150);
+              if (inputValue.trim()) addTag(inputValue);
+            }}
+            placeholder={tags.length === 0 ? placeholder : ''}
+            className="flex-1 min-w-[80px] bg-transparent text-xs text-[var(--color-text-secondary)] placeholder:text-[var(--color-text-muted)] outline-none"
           />
+        </div>
+        {/* Suggestions dropdown */}
+        {showSuggestions && availableSuggestions.length > 0 && (
+          <div className="absolute z-10 mt-1 w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg shadow-lg overflow-hidden">
+            {availableSuggestions.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  addTag(suggestion);
+                }}
+                className="w-full px-3 py-2 text-left text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
         )}
       </div>
+      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+        Press Enter or comma to add custom tags
+      </p>
     </div>
   );
 }
@@ -166,6 +142,9 @@ function PrioritySelect({
 export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+
+  // Migrate old category to tags if needed
+  const currentTags = term.tags || (term.category ? [term.category] : []);
 
   // AI Review function - calls enhance API for this single term
   const handleAIReview = async () => {
@@ -181,7 +160,7 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
             acronym: term.acronym,
             definition: term.definition,
             calculation: term.calculation,
-            category: term.category,
+            tags: currentTags,
             relatedTerms: term.relatedTerms,
           }]
         }),
@@ -200,7 +179,7 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
           acronym: enhanced.acronym || undefined,
           definition: enhanced.definition || term.definition,
           calculation: enhanced.calculation || undefined,
-          category: enhanced.category || term.category,
+          tags: enhanced.tags || currentTags,
           relatedTerms: enhanced.relatedTerms || term.relatedTerms,
           updatedAt: new Date().toISOString()
         });
@@ -214,21 +193,20 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
 
   // Edit state for all fields
   const [editedTerm, setEditedTerm] = useState(term.term);
-  const [editedAcronyms, setEditedAcronyms] = useState<string[]>(term.acronym ? [term.acronym] : []);
+  const [editedAcronym, setEditedAcronym] = useState(term.acronym || '');
   const [editedDefinition, setEditedDefinition] = useState(term.definition);
   const [editedCalculation, setEditedCalculation] = useState(term.calculation || '');
-  const [editedCategory, setEditedCategory] = useState(term.category || '');
+  const [editedTags, setEditedTags] = useState<string[]>(currentTags);
   const [editedRelatedTerms, setEditedRelatedTerms] = useState<string[]>(term.relatedTerms || []);
 
-  const priorityStyles = getPriorityStyles(term.category);
   const termIsKPI = isKPI(term);
 
   const handleStartEdit = () => {
     setEditedTerm(term.term);
-    setEditedAcronyms(term.acronym ? [term.acronym] : []);
+    setEditedAcronym(term.acronym || '');
     setEditedDefinition(term.definition);
     setEditedCalculation(term.calculation || '');
-    setEditedCategory(term.category || '');
+    setEditedTags(currentTags);
     setEditedRelatedTerms(term.relatedTerms || []);
     setIsEditing(true);
   };
@@ -241,11 +219,12 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
     onEdit({
       ...term,
       term: editedTerm.trim(),
-      acronym: editedAcronyms.length > 0 ? editedAcronyms[0] : undefined,
+      acronym: editedAcronym.trim() || undefined,
       definition: editedDefinition.trim(),
       calculation: editedCalculation.trim() || undefined,
-      category: editedCategory.trim() || undefined,
+      tags: editedTags.length > 0 ? editedTags : undefined,
       relatedTerms: editedRelatedTerms.length > 0 ? editedRelatedTerms : undefined,
+      category: undefined, // Clear deprecated field
       updatedAt: new Date().toISOString()
     });
     setIsEditing(false);
@@ -273,14 +252,19 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
             />
           </div>
 
-          {/* Acronym */}
-          <TagInput
-            tags={editedAcronyms}
-            onTagsChange={setEditedAcronyms}
-            placeholder="Add acronym (e.g., KPI)"
-            label="Acronym / Abbreviation"
-            singleTag={true}
-          />
+          {/* Acronym - Simple text input */}
+          <div>
+            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] mb-1 uppercase tracking-wide">
+              Acronym / Abbreviation
+            </label>
+            <input
+              type="text"
+              value={editedAcronym}
+              onChange={(e) => setEditedAcronym(e.target.value.toUpperCase())}
+              placeholder="e.g., CPL, CPA, ROI"
+              className="w-full p-2 bg-[var(--color-form)] border border-[var(--color-border)] rounded-lg text-xs text-[var(--color-text-secondary)] focus:border-[var(--color-blue-primary)] focus:ring-1 focus:ring-[var(--color-blue-primary)] uppercase"
+            />
+          </div>
 
           {/* Definition */}
           <div>
@@ -312,10 +296,13 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
             />
           </div>
 
-          {/* Category */}
-          <PrioritySelect
-            value={editedCategory}
-            onChange={setEditedCategory}
+          {/* Tags with suggestions */}
+          <TagInput
+            tags={editedTags}
+            onTagsChange={setEditedTags}
+            placeholder="Add tags..."
+            label="Tags"
+            suggestions={TAG_SUGGESTIONS}
           />
 
           {/* Related Terms */}
@@ -414,13 +401,19 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
             </span>
           )}
 
-          {/* Category/Priority Badge */}
-          {term.category && (
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded border ${priorityStyles.bg} ${priorityStyles.text} ${priorityStyles.border}`}>
-              <Tag className="h-3 w-3" />
-              {term.category}
-            </span>
-          )}
+          {/* Tags */}
+          {currentTags.map((tag, i) => {
+            const styles = getTagStyles(tag);
+            return (
+              <span
+                key={i}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded border ${styles.bg} ${styles.text} ${styles.border}`}
+              >
+                <Tag className="h-3 w-3" />
+                {tag}
+              </span>
+            );
+          })}
         </div>
 
         {/* Definition */}

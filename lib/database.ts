@@ -134,12 +134,13 @@ export async function checkDuplicates(termName: string): Promise<Term | null> {
 
 // Export to CSV
 export function exportToCSV(terms: Term[]): string {
-  const headers = ['Term', 'Acronym', 'Definition', 'Category', 'Related Terms', 'Calculation'];
+  const headers = ['Term', 'Acronym', 'Definition', 'Tags', 'Related Terms', 'Calculation'];
   const rows = terms.map(term => [
     term.term,
     term.acronym || '',
     term.definition.replace(/"/g, '""'),
-    term.category || '',
+    // Export tags, or fallback to category for backward compatibility
+    (term.tags?.join('; ') || term.category || '').replace(/"/g, '""'),
     term.relatedTerms?.join('; ') || '',
     term.calculation || ''
   ]);
@@ -248,7 +249,7 @@ export async function importFromCSV(csvContent: string): Promise<ImportResult> {
     const termIdx = headers.findIndex(h => h === 'term' || h === 'name');
     const acronymIdx = headers.findIndex(h => h === 'acronym' || h === 'abbreviation');
     const definitionIdx = headers.findIndex(h => h === 'definition' || h === 'description');
-    const categoryIdx = headers.findIndex(h => h === 'category' || h === 'priority' || h === 'type');
+    const tagsIdx = headers.findIndex(h => h === 'tags' || h === 'category' || h === 'priority' || h === 'type');
     const relatedIdx = headers.findIndex(h => h === 'related' || h === 'related terms');
     const calculationIdx = headers.findIndex(h => h === 'calculation' || h === 'formula');
 
@@ -288,12 +289,21 @@ export async function importFromCSV(csvContent: string): Promise<ImportResult> {
           .filter(t => t.length > 0);
       }
 
+      // Parse tags from CSV (can be semicolon-separated)
+      let tags: string[] | undefined;
+      if (tagsIdx !== -1 && row[tagsIdx]) {
+        tags = row[tagsIdx]
+          .split(/[;,]/)
+          .map(t => t.trim())
+          .filter(t => t.length > 0);
+      }
+
       const term: Term = {
         id: crypto.randomUUID(),
         term: termName,
         acronym: acronymIdx !== -1 ? row[acronymIdx]?.trim() || undefined : undefined,
         definition: definition,
-        category: categoryIdx !== -1 ? row[categoryIdx]?.trim() || undefined : undefined,
+        tags: tags && tags.length > 0 ? tags : undefined,
         relatedTerms: relatedTerms,
         calculation: calculationIdx !== -1 ? row[calculationIdx]?.trim() || undefined : undefined,
         createdAt: now,
