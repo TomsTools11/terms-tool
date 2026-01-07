@@ -29,6 +29,8 @@ function GlossaryPageContent() {
   const [isImporting, setIsImporting] = useState(false);
   const [isReviewingAll, setIsReviewingAll] = useState(false);
   const [reviewProgress, setReviewProgress] = useState({ current: 0, total: 0 });
+  const [isReviewingDuplicates, setIsReviewingDuplicates] = useState(false);
+  const [aiDuplicateResult, setAiDuplicateResult] = useState<{ groups: { termIds: string[]; reason: string }[]; message: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -242,6 +244,73 @@ function GlossaryPageContent() {
     await loadTerms();
   };
 
+  const handleAIDuplicateReview = async () => {
+    if (terms.length < 2) return;
+
+    setIsReviewingDuplicates(true);
+    setAiDuplicateResult(null);
+
+    try {
+      const response = await fetch('/api/find-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          terms: terms.map(t => ({
+            id: t.id,
+            term: t.term,
+            acronym: t.acronym,
+            definition: t.definition,
+          }))
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to analyze duplicates');
+      }
+
+      const data = await response.json();
+      setAiDuplicateResult(data);
+    } catch (error) {
+      console.error('AI duplicate review failed:', error);
+      setAiDuplicateResult({ groups: [], message: 'Failed to analyze terms for duplicates.' });
+    } finally {
+      setIsReviewingDuplicates(false);
+    }
+  };
+
+  const handleRemoveAIDuplicates = async (groupIndex: number) => {
+    if (!aiDuplicateResult) return;
+
+    const group = aiDuplicateResult.groups[groupIndex];
+    if (!group || group.termIds.length < 2) return;
+
+    // Get the terms in this group
+    const groupTerms = group.termIds
+      .map(id => terms.find(t => t.id === id))
+      .filter((t): t is Term => t !== undefined);
+
+    if (groupTerms.length < 2) return;
+
+    // Sort by updatedAt descending and keep the most recent
+    groupTerms.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+    // Delete all but the first (most recent)
+    for (let i = 1; i < groupTerms.length; i++) {
+      await deleteTerm(groupTerms[i].id);
+    }
+
+    // Update the AI result to remove this group
+    setAiDuplicateResult(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        groups: prev.groups.filter((_, i) => i !== groupIndex)
+      };
+    });
+
+    await loadTerms();
+  };
+
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -425,6 +494,23 @@ function GlossaryPageContent() {
                   </>
                 )}
               </button>
+              <button
+                onClick={handleAIDuplicateReview}
+                disabled={isReviewingDuplicates || terms.length < 2}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#7c3aed] to-[var(--color-warning)] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isReviewingDuplicates ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Find Duplicates with AI
+                  </>
+                )}
+              </button>
               <label className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
                 {isImporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -496,6 +582,75 @@ function GlossaryPageContent() {
               >
                 <X className="h-4 w-4" />
               </button>
+            </div>
+          )}
+
+          {/* AI Duplicate Review Results */}
+          {aiDuplicateResult && (
+            <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-[var(--color-border)]">
+                <div className="flex items-center gap-2">
+                  <Copy className="h-5 w-5 text-[#7c3aed]" />
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    AI Duplicate Analysis
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setAiDuplicateResult(null)}
+                  className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-4">
+                {aiDuplicateResult.groups.length === 0 ? (
+                  <div className="flex items-center gap-2 text-[var(--color-success)]">
+                    <CheckCircle className="h-5 w-5" />
+                    <p className="text-sm">{aiDuplicateResult.message || 'No duplicate or similar terms found!'}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-[var(--color-text-muted)]">
+                      Found {aiDuplicateResult.groups.length} group{aiDuplicateResult.groups.length > 1 ? 's' : ''} of similar terms:
+                    </p>
+                    {aiDuplicateResult.groups.map((group, groupIndex) => {
+                      const groupTerms = group.termIds
+                        .map(id => terms.find(t => t.id === id))
+                        .filter((t): t is Term => t !== undefined);
+
+                      return (
+                        <div
+                          key={groupIndex}
+                          className="p-3 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border)]"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-wrap gap-2 mb-2">
+                                {groupTerms.map((t, i) => (
+                                  <span
+                                    key={t.id}
+                                    className="inline-flex items-center px-2 py-1 text-xs font-medium bg-[var(--color-warning)]/10 text-[var(--color-warning)] rounded border border-[var(--color-warning)]/30"
+                                  >
+                                    {t.term}
+                                    {t.acronym && ` (${t.acronym})`}
+                                  </span>
+                                ))}
+                              </div>
+                              <p className="text-xs text-[var(--color-text-muted)]">{group.reason}</p>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveAIDuplicates(groupIndex)}
+                              className="flex-shrink-0 px-3 py-1.5 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs font-medium rounded-lg hover:bg-[var(--color-error)]/20 transition-colors"
+                            >
+                              Keep Newest
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
