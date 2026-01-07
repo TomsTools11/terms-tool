@@ -93,6 +93,19 @@ export async function deleteTerm(id: string): Promise<boolean> {
   }
 }
 
+// Clear all terms
+export async function clearAllTerms(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch (error) {
+    console.error('Error clearing terms:', error);
+    return false;
+  }
+}
+
 // Search terms
 export async function searchTerms(query: string): Promise<Term[]> {
   const terms = await getTerms();
