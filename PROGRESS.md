@@ -92,7 +92,7 @@ terms-tool/
 │   ├── TagInput.tsx            # Reusable tag input component
 │   └── TermCard.tsx            # Card for saved glossary terms
 ├── lib/
-│   ├── database.ts             # localStorage CRUD operations
+│   ├── database.ts             # localStorage CRUD + custom tags storage
 │   ├── netlifyIdentity.ts      # Netlify Identity setup
 │   └── types.ts                # TypeScript interfaces
 ├── terms.csv                   # Sample terms data (reference)
@@ -134,16 +134,27 @@ interface Term {
    - Tag suggestions: Top Priority, Medium Priority, Low Priority
    - Color-coded tags (red/yellow/green based on priority)
 
-2. **AI Enhancement Improvements**
-   - Stricter guidelines for KPI classification
-   - Only adds calculations for TRUE measurable KPIs
-   - Only adds acronyms for industry-standard abbreviations (CPL, CPA, etc.)
-   - Never adds acronyms for descriptive terms like "Currently Insured"
+2. **Custom Tags Persistence**
+   - Users can add custom tags beyond the defaults
+   - Custom tags are stored in localStorage (`terms-tool-custom-tags`)
+   - New tags appear in dropdown suggestions for future edits
+   - Tags refresh when editing starts to pick up tags added on other cards
 
-3. **Review All Feature**
+3. **AI Enhancement Improvements**
+   - Much stricter guidelines for KPI classification
+   - Acronyms are now RARE - most terms should NOT have one
+   - AI actively REMOVES invalid acronyms (e.g., "CI" from "Currently Insured")
+   - Clear examples of correct vs incorrect acronym usage
+   - Tags field handled separately - not confused with acronyms
+   - Only adds calculations for TRUE measurable KPIs
+
+4. **Review All Feature**
    - Added "Review All with AI" button to glossary
    - Processes terms in batches of 5 to avoid timeouts
    - Shows progress indicator during review
+
+5. **Removed Clear All Button**
+   - Removed the button that clears the entire glossary to prevent accidental data loss
 
 ---
 
