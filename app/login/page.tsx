@@ -16,6 +16,9 @@ export default function LoginPage() {
 
   // Show configuration error if Supabase isn't set up
   if (!supabase) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
     return (
       <div className="min-h-screen bg-[var(--color-bg-primary)] flex items-center justify-center p-4">
         <div className="w-full max-w-md text-center">
@@ -26,12 +29,19 @@ export default function LoginPage() {
           <p className="text-[var(--color-text-muted)] mb-4">
             Supabase is not configured. Please add the following environment variables:
           </p>
-          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 text-left">
-            <code className="text-sm text-[var(--color-text-secondary)]">
-              NEXT_PUBLIC_SUPABASE_URL<br />
-              NEXT_PUBLIC_SUPABASE_ANON_KEY
-            </code>
+          <div className="bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg p-4 text-left space-y-2">
+            <div>
+              <code className="text-sm text-[var(--color-text-secondary)]">NEXT_PUBLIC_SUPABASE_URL</code>
+              <span className="ml-2 text-xs">{url ? '✓ Set' : '✗ Missing'}</span>
+            </div>
+            <div>
+              <code className="text-sm text-[var(--color-text-secondary)]">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>
+              <span className="ml-2 text-xs">{key ? '✓ Set' : '✗ Missing'}</span>
+            </div>
           </div>
+          <p className="text-[var(--color-text-muted)] text-sm mt-4">
+            After adding these in Netlify, trigger a new deploy.
+          </p>
         </div>
       </div>
     );
