@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { Term } from '@/lib/types';
-import { getTerms, saveTerm, deleteTerm, clearAllTerms, downloadCSV, importFromCSV, ImportResult } from '@/lib/database';
+import { getTerms, saveTerm, deleteTerm, downloadCSV, importFromCSV, ImportResult } from '@/lib/database';
 import TermCard from '@/components/TermCard';
 import AppLayout from '@/components/AppLayout';
 import ProtectedPage from '@/components/ProtectedPage';
-import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Trash2, Calculator, Filter, Sparkles } from 'lucide-react';
+import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Calculator, Filter, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 type FilterType = 'all' | 'kpi' | 'top' | 'medium' | 'low';
@@ -111,13 +111,6 @@ function GlossaryPageContent() {
 
   const handleExport = () => {
     downloadCSV(terms, `glossary-${new Date().toISOString().split('T')[0]}.csv`);
-  };
-
-  const handleClearAll = async () => {
-    if (window.confirm(`Are you sure you want to delete all ${terms.length} terms? This cannot be undone.`)) {
-      await clearAllTerms();
-      await loadTerms();
-    }
   };
 
   const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -325,13 +318,6 @@ function GlossaryPageContent() {
               >
                 <Download className="h-4 w-4" />
                 Export
-              </button>
-              <button
-                onClick={handleClearAll}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--color-error)]/10 border border-[var(--color-error)]/30 rounded-lg text-sm font-medium text-[var(--color-error)] hover:bg-[var(--color-error)]/20 transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-                Clear
               </button>
             </div>
           </div>
