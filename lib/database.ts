@@ -1,196 +1,125 @@
-import { createClient } from '@/lib/supabase/client';
 import { Term } from './types';
 
-// Convert database row to Term type
-function rowToTerm(row: Record<string, unknown>): Term {
-  return {
-    id: row.id as string,
-    term: row.term as string,
-    acronym: row.acronym as string | undefined,
-    definition: row.definition as string,
-    category: row.category as string | undefined,
-    relatedTerms: row.related_terms as string[] | undefined,
-    calculation: row.calculation as string | undefined,
-    confidence: row.confidence as number | undefined,
-    sourceContext: row.source_context as string | undefined,
-    createdAt: row.created_at as string,
-    updatedAt: row.updated_at as string,
-  };
-}
+const STORAGE_KEY = 'terms-tool-glossary';
 
-// Convert Term to database row format
-function termToRow(term: Omit<Term, 'createdAt' | 'updatedAt'>) {
-  return {
-    id: term.id,
-    term: term.term,
-    acronym: term.acronym || null,
-    definition: term.definition,
-    category: term.category || null,
-    related_terms: term.relatedTerms || null,
-    calculation: term.calculation || null,
-    confidence: term.confidence || null,
-    source_context: term.sourceContext || null,
-  };
-}
-
+// Get all terms from localStorage
 export async function getTerms(): Promise<Term[]> {
-  const supabase = createClient();
+  if (typeof window === 'undefined') return [];
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return [];
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.error('Error reading terms from localStorage:', error);
   }
-
-  const { data, error } = await supabase
-    .from('terms')
-    .select('*')
-    .order('term', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching terms:', error);
-    return [];
-  }
-
-  return (data || []).map(rowToTerm);
+  return [];
 }
 
+// Get a single term by ID
 export async function getTerm(id: string): Promise<Term | null> {
-  const supabase = createClient();
-
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from('terms')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error) {
-    console.error('Error fetching term:', error);
-    return null;
-  }
-
-  return rowToTerm(data);
+  const terms = await getTerms();
+  return terms.find(t => t.id === id) || null;
 }
 
+// Save a single term (create or update)
 export async function saveTerm(term: Term): Promise<Term | null> {
-  const supabase = createClient();
+  if (typeof window === 'undefined') return null;
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return null;
-  }
+  try {
+    const terms = await getTerms();
+    const existingIndex = terms.findIndex(t => t.id === term.id);
 
-  const { data, error } = await supabase
-    .from('terms')
-    .upsert(termToRow(term))
-    .select()
-    .single();
+    const updatedTerm = {
+      ...term,
+      updatedAt: new Date().toISOString()
+    };
 
-  if (error) {
+    if (existingIndex >= 0) {
+      terms[existingIndex] = updatedTerm;
+    } else {
+      terms.push(updatedTerm);
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(terms));
+    return updatedTerm;
+  } catch (error) {
     console.error('Error saving term:', error);
     return null;
   }
-
-  return rowToTerm(data);
 }
 
+// Save multiple terms
 export async function saveTerms(terms: Term[]): Promise<{ count: number; error?: string }> {
-  const supabase = createClient();
-
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return { count: 0, error: 'Database not configured. Please check environment variables.' };
+  if (typeof window === 'undefined') {
+    return { count: 0, error: 'Cannot save on server' };
   }
 
-  const rows = terms.map(termToRow);
+  try {
+    const existingTerms = await getTerms();
+    const existingMap = new Map(existingTerms.map(t => [t.id, t]));
 
-  const { data, error } = await supabase
-    .from('terms')
-    .upsert(rows)
-    .select();
+    // Merge new terms with existing
+    terms.forEach(term => {
+      existingMap.set(term.id, {
+        ...term,
+        updatedAt: new Date().toISOString()
+      });
+    });
 
-  if (error) {
+    const allTerms = Array.from(existingMap.values());
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allTerms));
+
+    return { count: terms.length };
+  } catch (error) {
     console.error('Error saving terms:', error);
-    return { count: 0, error: error.message };
+    return { count: 0, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-
-  return { count: data?.length || 0 };
 }
 
+// Delete a term
 export async function deleteTerm(id: string): Promise<boolean> {
-  const supabase = createClient();
+  if (typeof window === 'undefined') return false;
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return false;
-  }
-
-  const { error } = await supabase
-    .from('terms')
-    .delete()
-    .eq('id', id);
-
-  if (error) {
+  try {
+    const terms = await getTerms();
+    const filtered = terms.filter(t => t.id !== id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    return true;
+  } catch (error) {
     console.error('Error deleting term:', error);
     return false;
   }
-
-  return true;
 }
 
+// Search terms
 export async function searchTerms(query: string): Promise<Term[]> {
-  const supabase = createClient();
+  const terms = await getTerms();
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return [];
-  }
+  if (!query.trim()) return terms;
 
-  if (!query.trim()) {
-    return getTerms();
-  }
-
-  const { data, error } = await supabase
-    .from('terms')
-    .select('*')
-    .or(`term.ilike.%${query}%,definition.ilike.%${query}%,acronym.ilike.%${query}%,category.ilike.%${query}%`)
-    .order('term', { ascending: true });
-
-  if (error) {
-    console.error('Error searching terms:', error);
-    return [];
-  }
-
-  return (data || []).map(rowToTerm);
+  const lowerQuery = query.toLowerCase();
+  return terms.filter(term =>
+    term.term.toLowerCase().includes(lowerQuery) ||
+    term.definition.toLowerCase().includes(lowerQuery) ||
+    term.acronym?.toLowerCase().includes(lowerQuery) ||
+    term.category?.toLowerCase().includes(lowerQuery)
+  );
 }
 
+// Check for duplicate terms
 export async function checkDuplicates(termName: string): Promise<Term | null> {
-  const supabase = createClient();
+  const terms = await getTerms();
+  const lowerName = termName.toLowerCase();
 
-  if (!supabase) {
-    console.error('Supabase not configured');
-    return null;
-  }
-
-  const { data, error } = await supabase
-    .from('terms')
-    .select('*')
-    .or(`term.ilike.${termName},acronym.ilike.${termName}`)
-    .limit(1)
-    .single();
-
-  if (error) {
-    return null;
-  }
-
-  return rowToTerm(data);
+  return terms.find(t =>
+    t.term.toLowerCase() === lowerName ||
+    t.acronym?.toLowerCase() === lowerName
+  ) || null;
 }
 
-// Export functions remain the same
+// Export to CSV
 export function exportToCSV(terms: Term[]): string {
   const headers = ['Term', 'Acronym', 'Definition', 'Category', 'Related Terms', 'Calculation'];
   const rows = terms.map(term => [
@@ -210,6 +139,7 @@ export function exportToCSV(terms: Term[]): string {
   return csvContent;
 }
 
+// Download CSV file
 export function downloadCSV(terms: Term[], filename = 'glossary.csv'): void {
   const csv = exportToCSV(terms);
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -220,14 +150,14 @@ export function downloadCSV(terms: Term[], filename = 'glossary.csv'): void {
   URL.revokeObjectURL(link.href);
 }
 
-// CSV Import function
+// CSV Import
 export interface ImportResult {
   imported: number;
   skipped: number;
   errors: string[];
 }
 
-// CSV parsing that handles quoted fields with commas and newlines
+// CSV parsing helpers
 function parseCSVRow(row: string): string[] {
   const result: string[] = [];
   let current = '';
@@ -286,6 +216,7 @@ function parseCSV(csvContent: string): string[][] {
   return rows;
 }
 
+// Import from CSV
 export async function importFromCSV(csvContent: string): Promise<ImportResult> {
   const result: ImportResult = { imported: 0, skipped: 0, errors: [] };
 
@@ -339,7 +270,7 @@ export async function importFromCSV(csvContent: string): Promise<ImportResult> {
       let relatedTerms: string[] | undefined;
       if (relatedIdx !== -1 && row[relatedIdx]) {
         relatedTerms = row[relatedIdx]
-          .split(/[-•\n]/)
+          .split(/[-•;\n]/)
           .map(t => t.trim())
           .filter(t => t.length > 0);
       }

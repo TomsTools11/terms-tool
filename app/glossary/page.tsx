@@ -139,7 +139,7 @@ export default function GlossaryPage() {
                 Glossary
               </h1>
               <p className="text-[var(--color-text-muted)] mt-1">
-                {terms.length} term{terms.length !== 1 ? 's' : ''} in shared glossary
+                {terms.length} term{terms.length !== 1 ? 's' : ''} in your glossary
               </p>
             </div>
 

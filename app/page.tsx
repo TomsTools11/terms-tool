@@ -53,8 +53,8 @@ export default function HomePage() {
           />
           <FeatureCard
             icon={<BookOpen className="h-6 w-6" />}
-            title="Shared Glossary"
-            description="All team members contribute to and access the same growing term library"
+            title="Growing Glossary"
+            description="Build your own growing term library with CSV import and export support"
           />
         </section>
 
@@ -67,7 +67,7 @@ export default function HomePage() {
             <Step number={1} title="Upload" description="Paste or upload your transcript" />
             <Step number={2} title="Extract" description="AI identifies key terms" />
             <Step number={3} title="Review" description="Edit and approve definitions" />
-            <Step number={4} title="Save" description="Add to shared glossary" />
+            <Step number={4} title="Save" description="Add to your glossary" />
           </div>
         </section>
       </div>
