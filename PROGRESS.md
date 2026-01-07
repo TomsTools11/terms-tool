@@ -156,6 +156,12 @@ interface Term {
 5. **Removed Clear All Button**
    - Removed the button that clears the entire glossary to prevent accidental data loss
 
+6. **Remove Duplicates Feature**
+   - Button appears only when duplicate terms are detected
+   - Detects duplicates by case-insensitive name matching
+   - Keeps the most recently updated version when removing duplicates
+   - Shows count of duplicates and requires confirmation before deletion
+
 ---
 
 ## Environment Variables
