@@ -1,8 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 
-const anthropic = new Anthropic();
-
 interface ExtractedTerm {
   id: string;
   term: string;
@@ -15,13 +13,25 @@ interface ExtractedTerm {
 export async function POST(request: NextRequest) {
   try {
     // Check for API key
-    if (!process.env.ANTHROPIC_API_KEY) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
       console.error('ANTHROPIC_API_KEY is not configured');
       return NextResponse.json(
         { error: 'API key not configured. Please set ANTHROPIC_API_KEY environment variable.' },
         { status: 500 }
       );
     }
+
+    // Log key info for debugging (first/last chars only)
+    console.log('API Key check:', {
+      length: apiKey.length,
+      prefix: apiKey.substring(0, 12),
+      suffix: apiKey.substring(apiKey.length - 4),
+    });
+
+    const anthropic = new Anthropic({
+      apiKey: apiKey,
+    });
 
     const { transcript } = await request.json();
 
@@ -105,25 +115,26 @@ Aim for 5-20 terms depending on the transcript content. Quality over quantity.`;
       terms,
       totalFound: terms.length,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Extraction error:', error);
 
-    // Provide more specific error messages
+    // Get full error details
     let errorMessage = 'Failed to extract terms';
-    if (error instanceof Error) {
-      if (error.message.includes('API key')) {
-        errorMessage = 'Invalid or missing API key';
-      } else if (error.message.includes('rate limit')) {
-        errorMessage = 'Rate limit exceeded. Please try again later.';
-      } else if (error.message.includes('context length') || error.message.includes('too long')) {
-        errorMessage = 'Transcript is too long. Please use a shorter transcript.';
-      } else {
-        errorMessage = error.message;
-      }
+    let errorDetails = '';
+
+    if (error && typeof error === 'object') {
+      const err = error as { status?: number; message?: string; error?: { type?: string; message?: string } };
+      errorDetails = JSON.stringify({
+        status: err.status,
+        message: err.message,
+        errorType: err.error?.type,
+        errorMessage: err.error?.message,
+      });
+      errorMessage = `${err.status || 'Unknown'} ${JSON.stringify(err.error || err.message || error)}`;
     }
 
     return NextResponse.json(
-      { error: errorMessage },
+      { error: errorMessage, details: errorDetails },
       { status: 500 }
     );
   }
