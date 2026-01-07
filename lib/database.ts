@@ -327,3 +327,72 @@ export async function importFromCSV(csvContent: string): Promise<ImportResult> {
 
   return result;
 }
+
+// Custom Tags Storage
+const CUSTOM_TAGS_KEY = 'terms-tool-custom-tags';
+const DEFAULT_TAGS = ['Top Priority', 'Medium Priority', 'Low Priority'];
+
+// Get all custom tags (default + user-added)
+export function getCustomTags(): string[] {
+  if (typeof window === 'undefined') return DEFAULT_TAGS;
+
+  try {
+    const stored = localStorage.getItem(CUSTOM_TAGS_KEY);
+    if (stored) {
+      const customTags = JSON.parse(stored) as string[];
+      // Merge default tags with custom ones, avoiding duplicates
+      const allTags = [...DEFAULT_TAGS];
+      customTags.forEach(tag => {
+        if (!allTags.some(t => t.toLowerCase() === tag.toLowerCase())) {
+          allTags.push(tag);
+        }
+      });
+      return allTags;
+    }
+  } catch (error) {
+    console.error('Error reading custom tags:', error);
+  }
+  return DEFAULT_TAGS;
+}
+
+// Add a new custom tag
+export function addCustomTag(tag: string): void {
+  if (typeof window === 'undefined') return;
+
+  const trimmed = tag.trim();
+  if (!trimmed) return;
+
+  // Don't save if it's a default tag
+  if (DEFAULT_TAGS.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+    return;
+  }
+
+  try {
+    const stored = localStorage.getItem(CUSTOM_TAGS_KEY);
+    const customTags: string[] = stored ? JSON.parse(stored) : [];
+
+    // Check if tag already exists (case-insensitive)
+    if (!customTags.some(t => t.toLowerCase() === trimmed.toLowerCase())) {
+      customTags.push(trimmed);
+      localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(customTags));
+    }
+  } catch (error) {
+    console.error('Error saving custom tag:', error);
+  }
+}
+
+// Remove a custom tag
+export function removeCustomTag(tag: string): void {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const stored = localStorage.getItem(CUSTOM_TAGS_KEY);
+    if (stored) {
+      const customTags: string[] = JSON.parse(stored);
+      const filtered = customTags.filter(t => t.toLowerCase() !== tag.toLowerCase());
+      localStorage.setItem(CUSTOM_TAGS_KEY, JSON.stringify(filtered));
+    }
+  } catch (error) {
+    console.error('Error removing custom tag:', error);
+  }
+}

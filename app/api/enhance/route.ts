@@ -7,7 +7,7 @@ interface TermToEnhance {
   acronym?: string;
   definition: string;
   calculation?: string;
-  category?: string;
+  tags?: string[];
   relatedTerms?: string[];
 }
 
@@ -44,70 +44,73 @@ export async function POST(request: NextRequest) {
 
       const prompt = `You are an expert at business terminology and KPIs. Analyze these terms and enhance them with STRICT rules:
 
-## STRICT KPI CLASSIFICATION
+## CRITICAL: ACRONYM RESTRICTIONS
+
+ACRONYMS ARE RARE. Most terms should NOT have an acronym.
+
+### ONLY add an acronym if:
+1. The term is a TRUE KPI with an industry-standard abbreviation (CPL, CPA, ROI, CTC, QTC)
+2. The term is a well-known system/tool that is ALWAYS referred to by its acronym (CRM, IVR, LMS)
+
+### NEVER add acronyms for:
+- Descriptive terms or status indicators
+- Segment names or demographic attributes
+- Process descriptions
+- Any term where you're just taking the first letters
+
+### REMOVE existing acronyms from:
+- "Currently Insured" - REMOVE "CI" (this is NOT a KPI acronym)
+- "Core Target Group" - REMOVE "CTG" (this is NOT a KPI acronym)
+- "Homeowner" - REMOVE "HO" (this is a demographic, not a KPI)
+- "Premium Per Household" - REMOVE "PPH" (unless widely used in industry)
+- Any term that is descriptive/categorical rather than a measurable metric
+
+### Examples of CORRECT acronym usage:
+- "Cost Per Lead" → acronym: "CPL" ✓ (TRUE KPI with standard abbreviation)
+- "Click-to-Close" → acronym: "CTC" ✓ (TRUE KPI with standard abbreviation)
+- "Customer Relationship Management" → acronym: "CRM" ✓ (universally known system)
+
+### Examples of INCORRECT acronym usage (set to null):
+- "Currently Insured" → acronym: null ✗ (NOT a KPI, just a status)
+- "Core Target Group" → acronym: null ✗ (a segment, not a metric)
+- "Day-Part Schedule" → acronym: null ✗ (a process, not a KPI)
+- "Homeowner" → acronym: null ✗ (a demographic attribute)
+- "Multi-car" → acronym: null ✗ (a policy type, not a KPI)
+
+## KPI CLASSIFICATION
 
 A term is ONLY a KPI if ALL of these are true:
-1. It is a QUANTITATIVE METRIC that can be measured with numbers
-2. It has a specific MATHEMATICAL FORMULA for calculation
-3. It is used to TRACK PERFORMANCE over time
-
-Examples of TRUE KPIs (should have acronyms and calculations):
-- "Cost Per Lead" (CPL) - Formula: Total Cost ÷ Number of Leads
-- "Sales Rate" (SR) - Formula: (# sales ÷ # leads) × 100
-- "Quote-to-Close" (QTC) - Formula: (# closed ÷ # quoted) × 100
-- "Click-to-Close" (CTC) - Formula: (# closed ÷ # clicks) × 100
-
-Examples of NON-KPIs (should have NO acronym, NO calculation):
-- "Currently Insured" - This is a DESCRIPTIVE STATUS, not a measurable KPI
-- "Core Target Group" - This is a SEGMENT DEFINITION, not a metric
-- "Homeowner" - This is a DEMOGRAPHIC ATTRIBUTE, not a KPI
-- "Day-Part Schedule" - This is a PROCESS/SYSTEM, not a metric
-- "Ad Units" - This is a CONCEPT, not a measurable KPI
-- "CRM" - This is a SYSTEM/TOOL, not a performance metric
-
-## ACRONYM RULES
-
-ONLY add acronyms for:
-- True KPIs with industry-standard abbreviations (CPL, CPA, CTC, ROI, etc.)
-- Well-known system acronyms (CRM, IVR, LMS)
-
-NEVER add acronyms for:
-- Descriptive terms ("Currently Insured" should NOT have "CI")
-- Segment names ("Core Target Group" should NOT have "CTG")
-- Status indicators
-- Any term that is not a widely-recognized abbreviation in the industry
+1. It is a QUANTITATIVE METRIC measured with numbers
+2. It has a specific MATHEMATICAL FORMULA
+3. It TRACKS PERFORMANCE over time
 
 ## CALCULATION RULES
 
-ONLY add calculations for TRUE KPIs that:
-- Have a specific mathematical formula
-- Result in a number, percentage, or rate
-- Are actively tracked as performance metrics
+ONLY add calculations for TRUE KPIs. Set to null for everything else.
 
-Set calculation to null for:
-- Descriptive terms
-- Processes or systems
-- Demographic attributes
-- Segment definitions
-- Anything that cannot be calculated with a formula
+## TAGS FIELD
 
-## OUTPUT REQUIREMENTS
+The tags field contains organizational labels (like "Top Priority", "Medium Priority").
+- KEEP existing tags unchanged
+- Tags are NOT acronyms - do not confuse them
 
-For each term:
-- id: keep the same
-- term: keep or slightly improve formatting
-- acronym: string ONLY for true KPIs with standard abbreviations, otherwise null
-- definition: improved, 2-3 sentences, clear and professional
-- calculation: formula string ONLY for true measurable KPIs, otherwise null
-- isKPI: true ONLY if it meets ALL KPI criteria above
-- category: keep the same if provided
-- relatedTerms: keep the same if provided
+## OUTPUT
 
-Here are the terms to enhance:
+For each term return:
+- id: same
+- term: keep or improve formatting slightly
+- acronym: string for TRUE KPIs only, otherwise null (REMOVE invalid acronyms)
+- definition: improved, 2-3 sentences, professional
+- calculation: formula for TRUE KPIs only, otherwise null
+- isKPI: true only for real measurable KPIs
+- tags: keep same as input
+- relatedTerms: keep same as input
+
+Terms to enhance:
 
 ${JSON.stringify(batch, null, 2)}
 
-Return ONLY a JSON array, no explanation.`;
+Return ONLY a JSON array.`;
 
       const response = await anthropic.messages.create({
         model: 'claude-3-haiku-20240307',

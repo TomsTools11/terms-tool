@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, KeyboardEvent } from 'react';
+import { useState, useEffect, KeyboardEvent } from 'react';
 import { Term } from '@/lib/types';
+import { getCustomTags, addCustomTag } from '@/lib/database';
 import { Pencil, Trash2, Check, X, Calculator, Link2, Tag, Sparkles, Loader2 } from 'lucide-react';
 
 interface TermCardProps {
@@ -14,9 +15,6 @@ interface TermCardProps {
 function isKPI(term: Term): boolean {
   return !!term.calculation && term.calculation.trim().length > 0;
 }
-
-// Preset tag suggestions
-const TAG_SUGGESTIONS = ['Top Priority', 'Medium Priority', 'Low Priority'];
 
 // Helper to get tag style based on tag name
 function getTagStyles(tag: string): { bg: string; text: string; border: string } {
@@ -40,12 +38,14 @@ function TagInput({
   placeholder,
   label,
   suggestions = [],
+  onTagAdd,
 }: {
   tags: string[];
   onTagsChange: (tags: string[]) => void;
   placeholder: string;
   label: string;
   suggestions?: string[];
+  onTagAdd?: (tag: string) => void;
 }) {
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -63,6 +63,10 @@ function TagInput({
     const trimmed = value.trim();
     if (trimmed && !tags.includes(trimmed)) {
       onTagsChange([...tags, trimmed]);
+      // Notify parent that a new tag was added (for persistence)
+      if (onTagAdd) {
+        onTagAdd(trimmed);
+      }
       setInputValue('');
       setShowSuggestions(false);
     }
@@ -142,6 +146,24 @@ function TagInput({
 export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+
+  // Load custom tags on mount
+  useEffect(() => {
+    setTagSuggestions(getCustomTags());
+  }, []);
+
+  // Refresh suggestions when editing starts (in case other cards added tags)
+  const refreshTagSuggestions = () => {
+    setTagSuggestions(getCustomTags());
+  };
+
+  // Handle new tag being added - persist to localStorage
+  const handleNewTag = (tag: string) => {
+    addCustomTag(tag);
+    // Refresh suggestions to include the new tag
+    setTagSuggestions(getCustomTags());
+  };
 
   // Migrate old category to tags if needed
   const currentTags = term.tags || (term.category ? [term.category] : []);
@@ -208,6 +230,7 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
     setEditedCalculation(term.calculation || '');
     setEditedTags(currentTags);
     setEditedRelatedTerms(term.relatedTerms || []);
+    refreshTagSuggestions(); // Refresh suggestions in case other cards added new tags
     setIsEditing(true);
   };
 
@@ -302,7 +325,8 @@ export default function TermCard({ term, onEdit, onDelete }: TermCardProps) {
             onTagsChange={setEditedTags}
             placeholder="Add tags..."
             label="Tags"
-            suggestions={TAG_SUGGESTIONS}
+            suggestions={tagSuggestions}
+            onTagAdd={handleNewTag}
           />
 
           {/* Related Terms */}
