@@ -42,47 +42,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Truncate if too long (Claude has context limits)
-    const truncatedTranscript = transcript.slice(0, 200000);
+    // Truncate to keep processing fast (Netlify has 10s timeout)
+    const truncatedTranscript = transcript.slice(0, 30000);
 
-    const systemPrompt = `You are an expert at identifying industry-specific terminology, acronyms, and jargon from business transcripts. Your task is to extract key terms that would be valuable to add to a professional glossary.
-
-Focus on:
-- Industry-specific terms (insurance, marketing, sales, finance)
-- Acronyms and abbreviations
-- Technical jargon
-- KPIs and metrics
-- Concepts that might be unfamiliar to new team members
-
-For each term, provide:
-1. The term itself (properly formatted)
-2. Any acronym/abbreviation if applicable
-3. A clear, professional definition (2-3 sentences)
-4. A confidence score (0-100) indicating how certain you are this is a legitimate industry term
-5. A brief context snippet showing where it appeared in the transcript (if available)
-
-Return your response as a JSON array of objects with these fields:
-- term: string
-- acronym: string (optional)
-- definition: string
-- confidence: number (0-100)
-- sourceContext: string (optional, a brief excerpt from the transcript)
-
-Only include terms that are:
-- Actually used in professional contexts
-- Worth defining for a glossary
-- Not common everyday words
-
-Aim for 5-20 terms depending on the transcript content. Quality over quantity.`;
+    const systemPrompt = `Extract industry terms, acronyms, and jargon from this transcript. Return ONLY a JSON array with objects containing: term, acronym (optional), definition (1 sentence), confidence (0-100). Extract 5-15 terms max. No explanation, just the JSON array.`;
 
     const response = await anthropic.messages.create({
       model: 'claude-3-haiku-20240307',
-      max_tokens: 4096,
+      max_tokens: 2000,
       system: systemPrompt,
       messages: [
         {
           role: 'user',
-          content: `Please analyze this transcript and extract key industry terms, acronyms, and jargon:\n\n${truncatedTranscript}`
+          content: truncatedTranscript
         }
       ]
     });
