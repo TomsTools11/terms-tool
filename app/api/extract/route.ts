@@ -66,7 +66,7 @@ Only include terms that are:
 Aim for 5-20 terms depending on the transcript content. Quality over quantity.`;
 
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-latest',
+      model: 'claude-3-haiku-20240307',
       max_tokens: 4096,
       system: systemPrompt,
       messages: [
