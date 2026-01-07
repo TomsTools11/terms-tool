@@ -258,4 +258,32 @@ The `terms.csv` file contains sample insurance/sales industry terms that can be 
 **Remote:** https://github.com/TomsTools11/terms-tool.git
 **Branch:** main
 
-Latest commit includes all field restructuring changes.
+**Latest commits include:**
+- AI-powered duplicate detection with semantic analysis
+- Fuzzy string matching for similar term detection
+- Custom tags persistence system
+- Stricter AI guidelines for acronyms and KPIs
+- Field restructuring (separate Acronym and Tags)
+
+---
+
+## Quick Start for Next Session
+
+1. **Run the dev server:**
+   ```bash
+   cd /Users/tpanos/TProjects/terms-tool
+   npm run dev
+   ```
+
+2. **Key files to review:**
+   - `app/glossary/page.tsx` - Main glossary page with all features
+   - `app/api/enhance/route.ts` - AI enhancement with strict KPI rules
+   - `app/api/find-duplicates/route.ts` - AI duplicate detection
+   - `lib/database.ts` - localStorage operations + custom tags
+   - `components/TermCard.tsx` - Term display and editing
+
+3. **Current state:**
+   - All features working and deployed
+   - Two duplicate detection methods: fuzzy matching + AI semantic
+   - Custom tags persist in localStorage
+   - AI strictly handles KPIs vs descriptive terms
