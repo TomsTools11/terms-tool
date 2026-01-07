@@ -6,7 +6,7 @@ import { getTerms, saveTerm, deleteTerm, clearAllTerms, downloadCSV, importFromC
 import TermCard from '@/components/TermCard';
 import AppLayout from '@/components/AppLayout';
 import ProtectedPage from '@/components/ProtectedPage';
-import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Trash2, Calculator, Filter } from 'lucide-react';
+import { Search, Download, BookOpen, Plus, Upload, X, CheckCircle, AlertCircle, Loader2, Trash2, Calculator, Filter, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 type FilterType = 'all' | 'kpi' | 'top' | 'medium' | 'low';
@@ -27,6 +27,8 @@ function GlossaryPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isReviewingAll, setIsReviewingAll] = useState(false);
+  const [reviewProgress, setReviewProgress] = useState({ current: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -130,6 +132,74 @@ function GlossaryPageContent() {
     reader.readAsText(file);
   };
 
+  const handleReviewAll = async () => {
+    if (terms.length === 0) return;
+
+    setIsReviewingAll(true);
+    setReviewProgress({ current: 0, total: terms.length });
+
+    try {
+      // Process in batches of 5 to avoid timeout
+      const batchSize = 5;
+      const updatedTerms: Term[] = [];
+
+      for (let i = 0; i < terms.length; i += batchSize) {
+        const batch = terms.slice(i, i + batchSize);
+        setReviewProgress({ current: i, total: terms.length });
+
+        const response = await fetch('/api/enhance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            terms: batch.map(t => ({
+              id: t.id,
+              term: t.term,
+              acronym: t.acronym,
+              definition: t.definition,
+              calculation: t.calculation,
+              category: t.category,
+              relatedTerms: t.relatedTerms,
+            }))
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.terms) {
+            data.terms.forEach((enhanced: Term & { isKPI?: boolean }) => {
+              const original = terms.find(t => t.id === enhanced.id);
+              if (original) {
+                updatedTerms.push({
+                  ...original,
+                  term: enhanced.term || original.term,
+                  acronym: enhanced.acronym || undefined,
+                  definition: enhanced.definition || original.definition,
+                  calculation: enhanced.calculation || undefined,
+                  category: enhanced.category || original.category,
+                  relatedTerms: enhanced.relatedTerms || original.relatedTerms,
+                  updatedAt: new Date().toISOString()
+                });
+              }
+            });
+          }
+        }
+      }
+
+      // Save all updated terms
+      for (const term of updatedTerms) {
+        await saveTerm(term);
+      }
+
+      setReviewProgress({ current: terms.length, total: terms.length });
+      await loadTerms();
+    } catch (error) {
+      console.error('Review all failed:', error);
+    } finally {
+      setIsReviewingAll(false);
+      setReviewProgress({ current: 0, total: 0 });
+    }
+  };
+
   const filterButtons: { id: FilterType; label: string; count: number; icon?: React.ReactNode }[] = [
     { id: 'all', label: 'All Terms', count: terms.length },
     { id: 'kpi', label: 'KPIs', count: stats.kpiCount, icon: <Calculator className="h-3.5 w-3.5" /> },
@@ -204,6 +274,23 @@ function GlossaryPageContent() {
                 <Plus className="h-4 w-4" />
                 Add Terms
               </Link>
+              <button
+                onClick={handleReviewAll}
+                disabled={isReviewingAll || terms.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[var(--color-blue-primary)] to-[#7c3aed] text-white rounded-lg text-sm font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                {isReviewingAll ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Reviewing {reviewProgress.current}/{reviewProgress.total}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4" />
+                    Review All with AI
+                  </>
+                )}
+              </button>
               <label className="flex items-center gap-2 px-4 py-2 bg-[var(--color-bg-secondary)] border border-[var(--color-border)] rounded-lg text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors cursor-pointer">
                 {isImporting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
