@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Truncate if too long (Claude has context limits)
-    const truncatedTranscript = transcript.slice(0, 50000);
+    const truncatedTranscript = transcript.slice(0, 200000);
 
     const systemPrompt = `You are an expert at identifying industry-specific terminology, acronyms, and jargon from business transcripts. Your task is to extract key terms that would be valuable to add to a professional glossary.
 

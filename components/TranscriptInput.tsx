@@ -57,7 +57,7 @@ export default function TranscriptInput({ onSubmit, isLoading }: TranscriptInput
   };
 
   const charCount = text.length;
-  const maxChars = 50000;
+  const maxChars = 200000;
   const isOverLimit = charCount > maxChars;
 
   return (
